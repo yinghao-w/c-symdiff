@@ -57,12 +57,16 @@ static void build(tok_Node **out, Token *oprs) {
 }
 
 /* Shunting yard algorithm */
-tok_Node *shunting_yard(char s[]) {
+tok_Node *shunting_yard(char expr[]) {
 	/* Initialises operator stack and output stack. Output stack consists of nodes
 	 * and should be at most 2 elements always? */
 	Token *oprs = NULL;
 	tok_Node **out = NULL;
 
+	/* TODO: Use safer functions */
+	int len = strlen(expr);
+	char *s = malloc(len + 1);
+	strcpy(s, expr);
 	char *str_token = strtok(s, " ");
 	for (int i = 0; str_token != NULL; str_token = strtok(NULL, " ")) {
 		Token token = tokenify(str_token);
@@ -105,6 +109,22 @@ tok_Node *shunting_yard(char s[]) {
 		assert (fp_peek(oprs).opr->repr[0] != '(');
 		build(out, oprs);
 	}
+	free(s);
+	fp_destroy(oprs);
+	tok_Node *root = fp_pop(out);
+	fp_destroy(out);
+	return root;
+}
 
-	return fp_pop(out);
+void ast_sub(tok_Node *old_node, tok_Node *new_node) {
+	if (old_node->parent == NULL) {
+		return;
+	}
+	if (old_node == old_node->parent->lchild) {
+		old_node->parent->lchild = new_node;
+	} else if (old_node == old_node->parent->rchild) {
+		old_node->parent->rchild = new_node;
+	}
+	new_node->parent = old_node->parent;
+	old_node->parent = NULL;
 }

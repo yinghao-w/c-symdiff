@@ -10,4 +10,8 @@
 
 tok_Node *shunting_yard(char s[]);
 
+Scalar ast_eval(tok_Node *node);
+
+void ast_sub(tok_Node *old_node, tok_Node *new_node);
+
 #endif
