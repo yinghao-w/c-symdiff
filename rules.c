@@ -1,5 +1,6 @@
 #include "symbols.h"
 #include "ast.h"
+#include <bits/types/siginfo_t.h>
 #include <complex.h>
 #include "rules.h"
 
@@ -11,47 +12,6 @@ struct rule {
 };
 
 struct rule rules[NUM_RULES];
-
-struct bindings {
-	tok_Node *f_bind;
-	tok_Node *g_bind;
-	int flag;
-};
-
-static struct bindings set(struct bindings binds, Var var, tok_Node *expr) {
-	if (var == 'f') {
-		binds.f_bind = expr;
-	} else {
-		binds.g_bind = expr;
-	}
-	binds.flag = 1;
-	return binds;
-}
-
-static tok_Node *get(struct bindings binds, Var var) {
-	if (binds.flag == 0) {
-		return NULL;
-	} else if (var == 'f') {
-		return binds.f_bind;
-	}
-	return binds.g_bind;
-}
-
-static struct bindings join(struct bindings bind1, struct bindings bind2) {
-	struct bindings binds;
-	if (bind1.f_bind) {
-		binds.f_bind = bind1.f_bind;
-	} else {
-		binds.f_bind = bind2.f_bind;
-	}
-	if (bind1.g_bind) {
-		binds.g_bind = bind1.g_bind;
-	} else {
-		binds.g_bind = bind2.g_bind;
-	}
-	binds.flag = 1;
-	return binds;
-}
 
 /* TODO: Store all nodes of trees in rules in static memory, not heap. */
 
@@ -70,8 +30,8 @@ void rule_init(void) {
 	rules[1] = rule_mult_0;
 }
 
-/* a recursive deep copy function. Using recursion because the target are the
- * replacement trees in the rule structs, which are small. */
+/* a recursive deep copy function. Using recursion because the arguments will
+ * be the replacement trees in the rule structs, which are small. */
 static tok_Node *r_copy(const tok_Node *node) {
 	if (node == NULL) {
 		return NULL;
@@ -79,40 +39,94 @@ static tok_Node *r_copy(const tok_Node *node) {
 	return tok_join(node->value, r_copy(node->lchild),r_copy(node->rchild));
 }
 
-struct bindings match(tok_Node *expr, tok_Node *pattern) {
-	struct bindings binds = {.f_bind = NULL, .g_bind=NULL, .flag = -1};
-	if (t_is_leaf(pattern)) {
-		if (pattern->value.token_type == SCALAR) {
-			if ((expr->value.token_type != SCALAR) || (expr->value.scalar != pattern->value.scalar)) {
-				binds.flag = 0;
-			}
-			binds.flag = 1;
-		} else {
-			binds = set(binds, pattern->value.var, expr);
-			// bind here
+
+static int tokcmp(const Token token1, const Token token2) {
+	if (token1.token_type == token2.token_type) {
+		switch (token1.token_type) {
+		case SCALAR:
+			return token1.scalar == token2.scalar;
+			break;
+		case VAR:
+			return token1.var == token2.var;
+			break;
+		case OPR:
+			return token1.opr == token2.opr;
+			break;
 		}
-		return binds;
+	} else {
+		return 0;
 	}
-	struct bindings l_binds = match(expr->lchild, pattern->lchild);
-	struct bindings r_binds = match(expr->rchild, pattern->rchild);
-	if (!l_binds.flag || !r_binds.flag) {
-		binds.flag = 0;
-		return binds;
-	}
-	binds = join(l_binds, r_binds);
-	return binds;
 }
 
+
+struct binding {
+	Var var;
+	tok_Node *expr;
+};
+
+struct bindings {
+	struct binding bind1;
+	struct binding bind2;
+};
+
+typedef struct bindings hashmap; // pretend its a hashmap/table
+								 //
+hashmap *hm_init(void);
+
+int is_bound(Var var, hashmap *hm);
+
+tok_Node *bind_get(Var var);
+
+void bind_set(Var var, tok_Node *expr, hashmap *hm);
+
+int match(tok_Node *expr, tok_Node *pattern, hashmap *hm) {
+
+
+	if (pattern == NULL) {
+		return 1;
+	} else if (expr == NULL) {
+		/* will not work for optional bindings, e.g. variadic functions */
+		return 0;
+	} else if (t_is_leaf(pattern)) {
+		if (pattern->value.token_type == SCALAR) {
+			/* if expr does not match the scalar pattern: */
+			if ((expr->value.token_type != SCALAR) || (expr->value.scalar != pattern->value.scalar)) {
+				return 0;
+			}
+		/* if pattern is a variable, will match anything non-NULL */
+		} else {
+			if (is_bound(pattern->value.var, hm)) {
+				return tok_is_equal(expr, bind_get(pattern->value.var), tokcmp);
+			} else {
+				bind_set(pattern->value.var, expr, hm);
+			}
+		}
+		/* if pattern is variable or scalar which matches expr: */
+		return 1;
+	} else if (expr->value.opr != pattern->value.opr) {
+		return 0;
+	}
+	return match(expr->lchild, pattern->lchild, hm) &&  match(expr->rchild, pattern->rchild, hm);
+}
+
+
+
 void rule_apply(tok_Node *expr, struct rule rule) {
-	struct bindings binds = match(expr, rule.pattern);
-	tok_disconnectc(bindings);
+	
+	hashmap *hm = hm_init();
+	match(expr, rule.pattern, hm);
+
+	// for var, expr in hm:
+	// 		tok_detach(expr)
+
+	tok_detach(expr);
 
 	// match expr and rule.pattern, and generate a set of bindings, if any
 
 	tok_Node* new_expr = r_copy(rule.replacement);
 	foreach(tok_Node, sub_expr, new_expr) {
 		if (1) {
-			ast_sub(sub_expr, get(bindings, sub_expr->value.var));
+			ast_sub(sub_expr, OLDGET(bindings, sub_expr->value.var));
 			tok_destroy(sub_expr);
 		}
 	}
