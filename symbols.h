@@ -15,6 +15,7 @@ typedef Opr ms_set[];
 
 int in_set(const ms_set);
 Opr *get_opr(const char s[]);
+Opr opr_get(const char s[], DPX_map *set)
 
 /* Return 1 if opr1 is higher precedence than opr2, -1 if opr is lower
  * precedence, and 0 if equal, i.e. >  */
