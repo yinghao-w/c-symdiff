@@ -95,6 +95,7 @@ void test_height(void) {
   ASSERT_STRUCT(i_height(node7) == 3, node7, tree_print);
   i_Node *test_leaf = i_leaf(19);
   ASSERT_STRUCT(i_height(test_leaf) == 0, test_leaf, tree_print);
+  free(test_leaf);
   TEST_TREE_TEARDOWN();
   printf("%s passed\n", __func__);
 }
@@ -161,6 +162,7 @@ void test_begin() {
   it = i_iter_create(leaf);
   ASSERT_STRUCT(i_begin(it) == leaf, it, iter_print);
   free(it);
+  free(leaf);
 
   TEST_TREE_TEARDOWN();
   printf("%s passed\n", __func__);
@@ -212,26 +214,25 @@ void test_iter() {
   assert(i == 6);
   free(it);
 
-	it = i_iter_create(node7);
-	i = 0;
+  it = i_iter_create(node7);
+  i = 0;
   for (node = i_begin(it); !i_end(it); node = i_next(it)) {
-	  i_Iter *it2 = i_iter_create(node);
-	  for (i_begin(it2); !i_end(it2); i_next(it2)) {
-		  i++;
-	  }
-	  free(it2);
+    i_Iter *it2 = i_iter_create(node);
+    for (i_begin(it2); !i_end(it2); i_next(it2)) {
+      i++;
+    }
+    free(it2);
   }
-  assert (i == 18);
+  assert(i == 18);
   free(it);
-
 
   TEST_TREE_TEARDOWN();
   printf("%s passed\n", __func__);
 }
 
 void node_value_get(i_Node *node, void *a) {
-	int *arr = (int *)a;
-	arr[node->value - 1] = node->value;
+  int *arr = (int *)a;
+  arr[node->value - 1] = node->value;
 }
 
 void test_iter_apply() {
@@ -239,38 +240,35 @@ void test_iter_apply() {
   int arr[7];
   i_iter_apply(node7, node_value_get, arr);
   for (int i = 0; i < 7; i++) {
-	  assert (arr[i] == i + 1);
+    assert(arr[i] == i + 1);
   }
   TEST_TREE_TEARDOWN();
   printf("%s passed\n", __func__);
 }
 
 void test_destroy() {
-	TEST_TREE_SETUP();
-	i_destroy(node7);
-	printf("%s check for memory leaks with valgrind\n", __func__);
+  TEST_TREE_SETUP();
+  i_destroy(node7);
+  printf("%s check for memory leaks with valgrind\n", __func__);
 }
 
-int int_is_equal(int n, int m) {
-	return n == m;
-}
+int int_is_equal(int n, int m) { return n == m; }
 
 // work on TODO:
 void test_is_equal() {
-	TEST_TREE_SETUP();
-	i_Node *tree1 = i_leaf(1);
-	i_Node *tree2 = i_leaf(2);
-	ASSERT_STRUCT(i_is_equal(tree1, tree1, int_is_equal), tree1, tree_print);
-	ASSERT_STRUCT(!i_is_equal(tree2, tree1, int_is_equal), tree2, tree_print);
-	i_Node *tree3 = i_join(3, tree2, NULL);
-	// ASSERT_STRUCT(i_is_equal(tree3, node3, int_is_equal), tree3, tree_print);
-	// ASSERT_STRUCT(i_is_equal(node3, tree3, int_is_equal), node3, tree_print);
-	free(tree1);
-	free(tree2);
-	free(tree3);
-	TEST_TREE_TEARDOWN();
+  TEST_TREE_SETUP();
+  i_Node *tree1 = i_leaf(1);
+  i_Node *tree2 = i_leaf(2);
+  ASSERT_STRUCT(i_is_equal(tree1, tree1, int_is_equal), tree1, tree_print);
+  ASSERT_STRUCT(!i_is_equal(tree2, tree1, int_is_equal), tree2, tree_print);
+  i_Node *tree3 = i_join(3, tree2, NULL);
+  ASSERT_STRUCT(i_is_equal(tree3, node3, int_is_equal), tree3, tree_print);
+  ASSERT_STRUCT(i_is_equal(node3, tree3, int_is_equal), node3, tree_print);
+  free(tree1);
+  free(tree2);
+  free(tree3);
+  TEST_TREE_TEARDOWN();
   printf("%s passed\n", __func__);
-
 }
 
 void run_tests(void) {

@@ -257,6 +257,7 @@ static size_t T_CONCAT(T_PREFIX, height)(P_Node *root) {
     }
     max = max >= height ? max : height;
   }
+  free(it);
   return max - 1;
 }
 
@@ -273,32 +274,39 @@ static void T_CONCAT(T_PREFIX, destroy)(P_Node *root) {
     node1 = node2;
   }
   free(node1);
+  free(it);
 }
 
 /* TODO: work on */
 /* v_is_equal(u, v) should return 1 if equal, 0 if not. */
 static int T_CONCAT(T_PREFIX, is_equal)(P_Node *root1, P_Node *root2,
                                         int (*v_is_equal)(T_TYPE, T_TYPE)) {
+  int return_val = 1;
   P_Iter *it1 = T_CONCAT(T_PREFIX, iter_create)(root1);
   P_Iter *it2 = T_CONCAT(T_PREFIX, iter_create)(root2);
   T_CONCAT(T_PREFIX, start)(it1);
   T_CONCAT(T_PREFIX, start)(it2);
   while (1) {
     if (!v_is_equal(it1->curr->value, it2->curr->value)) {
-      return 0;
+      return_val = 0;
+      break;
     }
     if (it1->dir != it2->dir) {
-      return 0;
-  }
+      return_val = 0;
+    }
     T_CONCAT(T_PREFIX, traverse)(it1);
     T_CONCAT(T_PREFIX, traverse)(it2);
     if (T_CONCAT(T_PREFIX, end)(it1) != T_CONCAT(T_PREFIX, end)(it2)) {
-		return 0;
+      return_val = 0;
+      break;
     } else if (T_CONCAT(T_PREFIX, end)(it1) && T_CONCAT(T_PREFIX, end)(it2)) {
+      return_val = 1;
       break;
     };
   }
-  return 1;
+  free(it1);
+  free(it2);
+  return return_val;
 }
 
 #ifdef T_DEBUG
@@ -337,6 +345,7 @@ static void T_CONCAT(T_PREFIX, DEBUG_PRINT)(P_Node *root,
     }
     printf("\n");
   }
+  free(it);
 }
 
 #endif
