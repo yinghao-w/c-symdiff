@@ -186,6 +186,7 @@ static P_Iter *T_CONCAT(T_PREFIX, iter_create)(P_Node *root, ORDER order) {
   return p;
 }
 
+/* Walks the tree one adjacent node at a time, depth first and left to right. */
 static P_Node *T_CONCAT(T_PREFIX, traverse)(P_Iter *it) {
   if (it->tail == it->root && it->tail->parent == it->head) {
     it->tail = NULL;
@@ -219,7 +220,14 @@ static P_Node *T_CONCAT(T_PREFIX, traverse)(P_Iter *it) {
   return it->tail;
 }
 
-static P_Node *T_CONCAT(T_PREFIX, next_all)(P_Iter *it) {
+static P_Node *T_CONCAT(T_PREFIX, start)(P_Iter *it) {
+  it->tail = it->root->parent;
+  it->head = it->root;
+  it->dir = LPARENT;
+  return T_CONCAT(T_PREFIX, traverse)(it);
+}
+
+static P_Node *T_CONCAT(T_PREFIX, next)(P_Iter *it) {
   while (1) {
     T_CONCAT(T_PREFIX, traverse)(it);
     switch (it->order) {
@@ -241,29 +249,7 @@ static P_Node *T_CONCAT(T_PREFIX, next_all)(P_Iter *it) {
   }
 }
 
-static P_Node *T_CONCAT(T_PREFIX, next)(P_Iter *it) {
-  while (1) {
-    T_CONCAT(T_PREFIX, traverse)(it);
-    if (!it->tail) {
-      return NULL;
-    } else if (it->dir == LCHILD || it->dir == RCHILD) {
-      return it->tail;
-    }
-  }
-}
-
-static P_Node *T_CONCAT(T_PREFIX, next_pre)(P_Iter *it) {
-  while (1) {
-    T_CONCAT(T_PREFIX, traverse)(it);
-    if (!it->head) {
-      return NULL;
-    } else if (it->dir == LPARENT || it->dir == RPARENT) {
-      return it->head;
-    }
-  }
-}
-
-static int T_CONCAT(T_PREFIX, end_all)(P_Iter *it) {
+static int T_CONCAT(T_PREFIX, end)(P_Iter *it) {
   switch (it->order) {
   case PRE:
     return !it->head;
@@ -274,7 +260,7 @@ static int T_CONCAT(T_PREFIX, end_all)(P_Iter *it) {
   }
 }
 
-static P_Node *T_CONCAT(T_PREFIX, begin_all)(P_Iter *it) {
+static P_Node *T_CONCAT(T_PREFIX, begin)(P_Iter *it) {
   it->tail = it->root->parent;
   it->head = it->root;
   it->dir = LPARENT;
@@ -282,34 +268,9 @@ static P_Node *T_CONCAT(T_PREFIX, begin_all)(P_Iter *it) {
   case PRE:
     return it->head;
   case POST:
-    return T_CONCAT(T_PREFIX, next_all)(it);
+    return T_CONCAT(T_PREFIX, next)(it);
   }
 }
-
-static int T_CONCAT(T_PREFIX, end_pre)(P_Iter *it) { return !it->head; }
-
-static P_Node *T_CONCAT(T_PREFIX, begin_pre)(P_Iter *it) {
-  it->tail = it->root->parent;
-  it->head = it->root;
-  it->dir = LPARENT;
-  return it->head;
-}
-
-static P_Node *T_CONCAT(T_PREFIX, start)(P_Iter *it) {
-  it->tail = it->root->parent;
-  it->head = it->root;
-  it->dir = LPARENT;
-  return T_CONCAT(T_PREFIX, traverse)(it);
-}
-
-static P_Node *T_CONCAT(T_PREFIX, begin)(P_Iter *it) {
-  it->tail = it->root->parent;
-  it->head = it->root;
-  it->dir = LPARENT;
-  return T_CONCAT(T_PREFIX, next)(it);
-}
-
-static int T_CONCAT(T_PREFIX, end)(P_Iter *it) { return !it->tail; }
 
 /* ---------------------------- *
  * ITERATOR DEPENDENT FUNCTIONS *

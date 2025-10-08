@@ -148,20 +148,20 @@ void test_iter_create() {
 void test_begin() {
   TEST_TREE_SETUP();
   I_Iter *it = i_iter_create(node7, POST);
-  I_Node *first = i_begin_all(it);
+  I_Node *first = i_begin(it);
   ASSERT_STRUCT(first == node1, it, iter_print);
   ASSERT_STRUCT(it->tail == node1, it, iter_print);
-  first = i_begin_all(it);
+  first = i_begin(it);
   ASSERT_STRUCT(first == node1, it, iter_print);
   free(it);
 
   it = i_iter_create(node6, POST);
-  ASSERT_STRUCT(i_begin_all(it) == node5, it, iter_print);
+  ASSERT_STRUCT(i_begin(it) == node5, it, iter_print);
   free(it);
 
   I_Node *leaf = i_leaf(11);
   it = i_iter_create(leaf, POST);
-  ASSERT_STRUCT(i_begin_all(it) == leaf, it, iter_print);
+  ASSERT_STRUCT(i_begin(it) == leaf, it, iter_print);
   free(it);
   free(leaf);
 
@@ -172,26 +172,26 @@ void test_begin() {
 void test_next() {
   TEST_TREE_SETUP();
   I_Iter *it = i_iter_create(node7, POST);
-  i_begin_all(it);
-  ASSERT_STRUCT(i_next_all(it) == node2, it, iter_print);
+  i_begin(it);
+  ASSERT_STRUCT(i_next(it) == node2, it, iter_print);
   ASSERT_STRUCT(it->tail == node2, it, iter_print);
 
-  ASSERT_STRUCT(i_next_all(it) == node3, it, iter_print);
+  ASSERT_STRUCT(i_next(it) == node3, it, iter_print);
   ASSERT_STRUCT(it->tail == node3, it, iter_print);
 
-  ASSERT_STRUCT(i_next_all(it) == node4, it, iter_print);
+  ASSERT_STRUCT(i_next(it) == node4, it, iter_print);
   ASSERT_STRUCT(it->tail == node4, it, iter_print);
 
-  ASSERT_STRUCT(i_next_all(it) == node5, it, iter_print);
+  ASSERT_STRUCT(i_next(it) == node5, it, iter_print);
   ASSERT_STRUCT(it->tail == node5, it, iter_print);
 
-  ASSERT_STRUCT(i_next_all(it) == node6, it, iter_print);
+  ASSERT_STRUCT(i_next(it) == node6, it, iter_print);
   ASSERT_STRUCT(it->tail == node6, it, iter_print);
 
-  ASSERT_STRUCT(i_next_all(it) == node7, it, iter_print);
+  ASSERT_STRUCT(i_next(it) == node7, it, iter_print);
   ASSERT_STRUCT(it->tail == node7, it, iter_print);
 
-  ASSERT_STRUCT(i_next_all(it) == NULL, it, iter_print);
+  ASSERT_STRUCT(i_next(it) == NULL, it, iter_print);
   ASSERT_STRUCT(it->tail == NULL, it, iter_print);
 
   free(it);
@@ -204,12 +204,12 @@ void test_iter() {
   I_Iter *it = i_iter_create(node7, POST);
   I_Node *node;
   int i;
-  for (node = i_begin_all(it), i = 1; !i_end_all(it); node = i_next_all(it), i++) {
+  for (node = i_begin(it), i = 1; !i_end(it); node = i_next(it), i++) {
     ASSERT_STRUCT(node->value == i, it, iter_print);
   }
   free(it);
   it = i_iter_create(node5, POST);
-  for (node = i_begin_all(it), i = 5; !i_end_all(it); node = i_next_all(it), i++) {
+  for (node = i_begin(it), i = 5; !i_end(it); node = i_next(it), i++) {
     ASSERT_STRUCT(node->value == 5, it, iter_print);
   }
   assert(i == 6);
@@ -217,9 +217,9 @@ void test_iter() {
 
   it = i_iter_create(node7, POST);
   i = 0;
-  for (node = i_begin_all(it); !i_end_all(it); node = i_next_all(it)) {
+  for (node = i_begin(it); !i_end(it); node = i_next(it)) {
     I_Iter *it2 = i_iter_create(node, POST);
-    for (i_begin_all(it2); !i_end_all(it2); i_next_all(it2)) {
+    for (i_begin(it2); !i_end(it2); i_next(it2)) {
       i++;
     }
     free(it2);
@@ -284,14 +284,11 @@ void test_begin_pre() {
   TEST_TREE_SETUP();
   I_Iter *it = i_iter_create(node7, PRE);
   I_Node *first = i_begin(it);
-  ASSERT_STRUCT(first == node1, it, iter_print);
-  ASSERT_STRUCT(it->tail == node1, it, iter_print);
-  first = i_begin(it);
-  ASSERT_STRUCT(first == node1, it, iter_print);
+  ASSERT_STRUCT(first == node7, it, iter_print);
   free(it);
 
   it = i_iter_create(node6, PRE);
-  ASSERT_STRUCT(i_begin(it) == node5, it, iter_print);
+  ASSERT_STRUCT(i_begin(it) == node6, it, iter_print);
   free(it);
 
   I_Node *leaf = i_leaf(11);
@@ -308,14 +305,14 @@ void test_next_pre() {
   TEST_TREE_SETUP();
   I_Iter *it = i_iter_create(node7, PRE);
 
-  i_begin_all(it);
-  ASSERT_STRUCT(i_next_all(it) == node4, it, iter_print);
-  ASSERT_STRUCT(i_next_all(it) == node1, it, iter_print);
-  ASSERT_STRUCT(i_next_all(it) == node3, it, iter_print);
-  ASSERT_STRUCT(i_next_all(it) == node2, it, iter_print);
-  ASSERT_STRUCT(i_next_all(it) == node6, it, iter_print);
-  ASSERT_STRUCT(i_next_all(it) == node5, it, iter_print);
-  ASSERT_STRUCT(i_next_all(it) == NULL, it, iter_print);
+  i_begin(it);
+  ASSERT_STRUCT(i_next(it) == node4, it, iter_print);
+  ASSERT_STRUCT(i_next(it) == node1, it, iter_print);
+  ASSERT_STRUCT(i_next(it) == node3, it, iter_print);
+  ASSERT_STRUCT(i_next(it) == node2, it, iter_print);
+  ASSERT_STRUCT(i_next(it) == node6, it, iter_print);
+  ASSERT_STRUCT(i_next(it) == node5, it, iter_print);
+  ASSERT_STRUCT(i_next(it) == NULL, it, iter_print);
 
   free(it);
   TEST_TREE_TEARDOWN();
@@ -328,12 +325,12 @@ void test_iter_pre() {
   I_Node *node;
   int a[] = {7, 4, 1, 3, 2, 6, 5};
   int i;
-  for (node = i_begin_all(it), i = 0; !i_end_all(it); node = i_next_all(it), i++) {
+  for (node = i_begin(it), i = 0; !i_end(it); node = i_next(it), i++) {
     ASSERT_STRUCT(node->value == a[i], it, iter_print);
   }
   free(it);
   it = i_iter_create(node5, PRE);
-  for (node = i_begin_all(it), i = 5; !i_end_all(it); node = i_next_all(it), i++) {
+  for (node = i_begin(it), i = 5; !i_end(it); node = i_next(it), i++) {
     ASSERT_STRUCT(node->value == 5, it, iter_print);
   }
   assert(i == 6);
@@ -341,9 +338,9 @@ void test_iter_pre() {
 
   it = i_iter_create(node7, PRE);
   i = 0;
-  for (node = i_begin_all(it); !i_end_all(it); node = i_next_all(it)) {
+  for (node = i_begin(it); !i_end(it); node = i_next(it)) {
     I_Iter *it2 = i_iter_create(node, PRE);
-    for (i_begin_all(it2); !i_end_all(it2); i_next_all(it2)) {
+    for (i_begin(it2); !i_end(it2); i_next(it2)) {
       i++;
     }
     free(it2);
