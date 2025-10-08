@@ -24,8 +24,8 @@
  *
  * 		i_destroy(root);
  *
- * 	Detach a node from its parent, setting respective parent and child pointers
- * 	to NULL:
+ * 	Detach a node from its parent, setting respective parent and child
+ * pointers to NULL:
  *
  * 		i_detach(node);
  *
@@ -46,8 +46,8 @@
  *
  * 	Or:
  *
- * 		for (i_Node *node = i_begin(it); !i_end(it); node = i_next(it)) {
- * 			func(node);
+ * 		for (i_Node *node = i_begin(it); !i_end(it); node = i_next(it))
+ * { func(node);
  * 		}
  *
  * 	Or use callbacks:
@@ -68,6 +68,7 @@
 typedef int T_DEBUG_TYPE;
 #define T_TYPE T_DEBUG_TYPE
 #define T_PREFIX T_DEBUG_PREFIX
+#define T_DEBUG
 #endif
 #endif
 
@@ -77,10 +78,17 @@ typedef int T_DEBUG_TYPE;
 #define T_CONCAT_2(A, B) A##_##B
 #define T_CONCAT(A, B) T_CONCAT_2(A, B)
 
-#define P_Node T_CONCAT(T_PREFIX, Node)
-#define P_Iter T_CONCAT(T_PREFIX, Iter)
+#ifndef T_STRUCT_PREFIX
+#define T_STRUCT_PREFIX T_PREFIX
+#endif
+
+#define P_Node T_CONCAT(T_STRUCT_PREFIX, Node)
 
 #include <stdlib.h>
+
+/* --------------------------------*
+ * BASIC DEFINITIONS AND FUNCTIONS *
+ * ------------------------------- */
 
 typedef struct P_Node P_Node;
 struct P_Node {
@@ -139,24 +147,30 @@ static void T_CONCAT(T_PREFIX, detach)(P_Node *node) {
   node->parent = NULL;
 }
 
+/* ----------------------- *
+ * ITERATOR IMPLEMENTATION *
+ * ------------------------*/
+
+#define P_Iter T_CONCAT(T_STRUCT_PREFIX, Iter)
+
 typedef enum { LPARENT, RPARENT, LCHILD, RCHILD } CURR_DIR;
 
 typedef struct {
   P_Node *root;
-  P_Node *curr;
-  P_Node *next;
+  P_Node *tail;
+  P_Node *head;
   CURR_DIR dir;
 } P_Iter;
 
-/* From the perspective of next, computes the relationship with curr. */
-static CURR_DIR T_CONCAT(T_PREFIX, curr_dir)(P_Node *curr, P_Node *next) {
-  if (!next) {
+/* From the perspective of head, computes the relationship with tail. */
+static CURR_DIR T_CONCAT(T_PREFIX, tail_dir)(P_Node *tail, P_Node *head) {
+  if (!head) {
     return LCHILD;
-  } else if (curr == next->lchild) {
+  } else if (tail == head->lchild) {
     return LCHILD;
-  } else if (curr == next->rchild) {
+  } else if (tail == head->rchild) {
     return RCHILD;
-  } else if (curr->lchild == next) {
+  } else if (tail->lchild == head) {
     return LPARENT;
   } else {
     return RPARENT;
@@ -170,63 +184,88 @@ static P_Iter *T_CONCAT(T_PREFIX, iter_create)(P_Node *root) {
 }
 
 static P_Node *T_CONCAT(T_PREFIX, traverse)(P_Iter *it) {
-  if (it->curr == it->root && it->curr->parent == it->next) {
-    it->curr = NULL;
+  if (it->tail == it->root && it->tail->parent == it->head) {
+    it->tail = NULL;
+    it->head = NULL;
   } else {
-    it->curr = it->next;
+    it->tail = it->head;
     switch (it->dir) {
     case LPARENT:
     case RPARENT:
-      if (it->next->lchild) {
-        it->next = it->next->lchild;
-      } else if (it->next->rchild) {
-        it->next = it->next->rchild;
+      if (it->head->lchild) {
+        it->head = it->head->lchild;
+      } else if (it->head->rchild) {
+        it->head = it->head->rchild;
       } else {
-        it->next = it->next->parent;
+        it->head = it->head->parent;
       }
       break;
     case LCHILD:
-      if (it->next->rchild) {
-        it->next = it->next->rchild;
+      if (it->head->rchild) {
+        it->head = it->head->rchild;
       } else {
-        it->next = it->next->parent;
+        it->head = it->head->parent;
       }
       break;
     case RCHILD:
-      it->next = it->next->parent;
+      it->head = it->head->parent;
       break;
     }
-    it->dir = T_CONCAT(T_PREFIX, curr_dir)(it->curr, it->next);
+    it->dir = T_CONCAT(T_PREFIX, tail_dir)(it->tail, it->head);
   }
-  return it->curr;
+  return it->tail;
 }
 
 static P_Node *T_CONCAT(T_PREFIX, next)(P_Iter *it) {
   while (1) {
     T_CONCAT(T_PREFIX, traverse)(it);
-    if (!it->curr) {
+    if (!it->tail) {
       return NULL;
     } else if (it->dir == LCHILD || it->dir == RCHILD) {
-      return it->curr;
+      return it->tail;
     }
   }
 }
 
+static P_Node *T_CONCAT(T_PREFIX, next_pre)(P_Iter *it) {
+  while (1) {
+    T_CONCAT(T_PREFIX, traverse)(it);
+    if (!it->head) {
+      return NULL;
+    } else if (it->dir == LPARENT || it->dir == RPARENT) {
+      return it->head;
+    }
+  }
+}
+
+static int T_CONCAT(T_PREFIX, end_pre)(P_Iter *it) { return !it->head; }
+
+static P_Node *T_CONCAT(T_PREFIX, begin_pre)(P_Iter *it) {
+  it->tail = it->root->parent;
+  it->head = it->root;
+  it->dir = LPARENT;
+  return it->head;
+}
+
 static P_Node *T_CONCAT(T_PREFIX, start)(P_Iter *it) {
-  it->curr = it->root->parent;
-  it->next = it->root;
+  it->tail = it->root->parent;
+  it->head = it->root;
   it->dir = LPARENT;
   return T_CONCAT(T_PREFIX, traverse)(it);
 }
 
 static P_Node *T_CONCAT(T_PREFIX, begin)(P_Iter *it) {
-  it->curr = it->root->parent;
-  it->next = it->root;
+  it->tail = it->root->parent;
+  it->head = it->root;
   it->dir = LPARENT;
   return T_CONCAT(T_PREFIX, next)(it);
 }
 
-static int T_CONCAT(T_PREFIX, end)(P_Iter *it) { return !it->curr; }
+static int T_CONCAT(T_PREFIX, end)(P_Iter *it) { return !it->tail; }
+
+/* ---------------------------- *
+ * ITERATOR DEPENDENT FUNCTIONS *
+ * ---------------------------- */
 
 static void T_CONCAT(T_PREFIX, iter_apply)(P_Node *root,
                                            void (*func)(P_Node *, void *),
@@ -234,7 +273,7 @@ static void T_CONCAT(T_PREFIX, iter_apply)(P_Node *root,
   P_Iter *it = T_CONCAT(T_PREFIX, iter_create)(root);
   for (T_CONCAT(T_PREFIX, begin)(it); !T_CONCAT(T_PREFIX, end)(it);
        T_CONCAT(T_PREFIX, next)(it)) {
-    func(it->curr, ctx);
+    func(it->tail, ctx);
   }
   free(it);
 }
@@ -267,7 +306,7 @@ static void T_CONCAT(T_PREFIX, destroy)(P_Node *root) {
   P_Node *node2 = NULL;
   for (T_CONCAT(T_PREFIX, begin)(it); !T_CONCAT(T_PREFIX, end)(it);
        T_CONCAT(T_PREFIX, next)(it)) {
-    node2 = it->curr;
+    node2 = it->tail;
     if (node1) {
       free(node1);
     }
@@ -277,7 +316,6 @@ static void T_CONCAT(T_PREFIX, destroy)(P_Node *root) {
   free(it);
 }
 
-/* TODO: work on */
 /* v_is_equal(u, v) should return 1 if equal, 0 if not. */
 static int T_CONCAT(T_PREFIX, is_equal)(P_Node *root1, P_Node *root2,
                                         int (*v_is_equal)(T_TYPE, T_TYPE)) {
@@ -287,7 +325,7 @@ static int T_CONCAT(T_PREFIX, is_equal)(P_Node *root1, P_Node *root2,
   T_CONCAT(T_PREFIX, start)(it1);
   T_CONCAT(T_PREFIX, start)(it2);
   while (1) {
-    if (!v_is_equal(it1->curr->value, it2->curr->value)) {
+    if (!v_is_equal(it1->tail->value, it2->tail->value)) {
       return_val = 0;
       break;
     }
@@ -330,18 +368,18 @@ static void T_CONCAT(T_PREFIX, DEBUG_PRINT)(P_Node *root,
   P_Iter *it = T_CONCAT(T_PREFIX, iter_create)(root);
   for (T_CONCAT(T_PREFIX, begin)(it); !T_CONCAT(T_PREFIX, end)(it);
        T_CONCAT(T_PREFIX, next)(it)) {
-    v_print(it->curr->value);
-    if (it->curr->parent) {
+    v_print(it->tail->value);
+    if (it->tail->parent) {
       printf(" P: ");
-      v_print(it->curr->parent->value);
+      v_print(it->tail->parent->value);
     }
-    if (it->curr->lchild) {
+    if (it->tail->lchild) {
       printf(" L: ");
-      v_print(it->curr->lchild->value);
+      v_print(it->tail->lchild->value);
     }
-    if (it->curr->rchild) {
+    if (it->tail->rchild) {
       printf(" R: ");
-      v_print(it->curr->rchild->value);
+      v_print(it->tail->rchild->value);
     }
     printf("\n");
   }
@@ -352,6 +390,8 @@ static void T_CONCAT(T_PREFIX, DEBUG_PRINT)(P_Node *root,
 
 #undef T_TYPE
 #undef T_PREFIX
+#undef T_STRUCT_PREFIX
+#undef T_DEBUG
 
 #undef T_CONCAT
 #undef T_CONCAT_2
