@@ -154,12 +154,14 @@ static void T_CONCAT(T_PREFIX, detach)(P_Node *node) {
 #define P_Iter T_CONCAT(T_STRUCT_PREFIX, Iter)
 
 typedef enum { LPARENT, RPARENT, LCHILD, RCHILD } CURR_DIR;
+typedef enum { PRE, POST } ORDER;
 
 typedef struct {
   P_Node *root;
   P_Node *tail;
   P_Node *head;
   CURR_DIR dir;
+  ORDER order;
 } P_Iter;
 
 /* From the perspective of head, computes the relationship with tail. */
@@ -177,9 +179,10 @@ static CURR_DIR T_CONCAT(T_PREFIX, tail_dir)(P_Node *tail, P_Node *head) {
   }
 }
 
-static P_Iter *T_CONCAT(T_PREFIX, iter_create)(P_Node *root) {
+static P_Iter *T_CONCAT(T_PREFIX, iter_create)(P_Node *root, ORDER order) {
   P_Iter *p = malloc(sizeof(*p));
   p->root = root;
+  p->order = order;
   return p;
 }
 
@@ -216,6 +219,28 @@ static P_Node *T_CONCAT(T_PREFIX, traverse)(P_Iter *it) {
   return it->tail;
 }
 
+static P_Node *T_CONCAT(T_PREFIX, next_all)(P_Iter *it) {
+  while (1) {
+    T_CONCAT(T_PREFIX, traverse)(it);
+    switch (it->order) {
+    case PRE:
+      if (!it->head) {
+        return NULL;
+      } else if (it->dir == LPARENT || it->dir == RPARENT) {
+        return it->head;
+      }
+      break;
+    case POST:
+      if (!it->tail) {
+        return NULL;
+      } else if (it->dir == LCHILD || it->dir == RCHILD) {
+        return it->tail;
+      }
+      break;
+    }
+  }
+}
+
 static P_Node *T_CONCAT(T_PREFIX, next)(P_Iter *it) {
   while (1) {
     T_CONCAT(T_PREFIX, traverse)(it);
@@ -235,6 +260,29 @@ static P_Node *T_CONCAT(T_PREFIX, next_pre)(P_Iter *it) {
     } else if (it->dir == LPARENT || it->dir == RPARENT) {
       return it->head;
     }
+  }
+}
+
+static int T_CONCAT(T_PREFIX, end_all)(P_Iter *it) {
+  switch (it->order) {
+  case PRE:
+    return !it->head;
+    break;
+  case POST:
+    return !it->tail;
+    break;
+  }
+}
+
+static P_Node *T_CONCAT(T_PREFIX, begin_all)(P_Iter *it) {
+  it->tail = it->root->parent;
+  it->head = it->root;
+  it->dir = LPARENT;
+  switch (it->order) {
+  case PRE:
+    return it->head;
+  case POST:
+    return T_CONCAT(T_PREFIX, next_all)(it);
   }
 }
 
@@ -267,10 +315,10 @@ static int T_CONCAT(T_PREFIX, end)(P_Iter *it) { return !it->tail; }
  * ITERATOR DEPENDENT FUNCTIONS *
  * ---------------------------- */
 
-static void T_CONCAT(T_PREFIX, iter_apply)(P_Node *root,
+static void T_CONCAT(T_PREFIX, iter_apply)(P_Node *root, ORDER order,
                                            void (*func)(P_Node *, void *),
                                            void *ctx) {
-  P_Iter *it = T_CONCAT(T_PREFIX, iter_create)(root);
+  P_Iter *it = T_CONCAT(T_PREFIX, iter_create)(root, order);
   for (T_CONCAT(T_PREFIX, begin)(it); !T_CONCAT(T_PREFIX, end)(it);
        T_CONCAT(T_PREFIX, next)(it)) {
     func(it->tail, ctx);
@@ -279,7 +327,7 @@ static void T_CONCAT(T_PREFIX, iter_apply)(P_Node *root,
 }
 
 static size_t T_CONCAT(T_PREFIX, height)(P_Node *root) {
-  P_Iter *it = T_CONCAT(T_PREFIX, iter_create)(root);
+  P_Iter *it = T_CONCAT(T_PREFIX, iter_create)(root, POST);
   size_t height = 1;
   size_t max = 1;
   for (T_CONCAT(T_PREFIX, start)(it); !T_CONCAT(T_PREFIX, end)(it);
@@ -301,7 +349,7 @@ static size_t T_CONCAT(T_PREFIX, height)(P_Node *root) {
 }
 
 static void T_CONCAT(T_PREFIX, destroy)(P_Node *root) {
-  P_Iter *it = T_CONCAT(T_PREFIX, iter_create)(root);
+  P_Iter *it = T_CONCAT(T_PREFIX, iter_create)(root, POST);
   P_Node *node1 = NULL;
   P_Node *node2 = NULL;
   for (T_CONCAT(T_PREFIX, begin)(it); !T_CONCAT(T_PREFIX, end)(it);
@@ -320,8 +368,8 @@ static void T_CONCAT(T_PREFIX, destroy)(P_Node *root) {
 static int T_CONCAT(T_PREFIX, is_equal)(P_Node *root1, P_Node *root2,
                                         int (*v_is_equal)(T_TYPE, T_TYPE)) {
   int return_val = 1;
-  P_Iter *it1 = T_CONCAT(T_PREFIX, iter_create)(root1);
-  P_Iter *it2 = T_CONCAT(T_PREFIX, iter_create)(root2);
+  P_Iter *it1 = T_CONCAT(T_PREFIX, iter_create)(root1, POST);
+  P_Iter *it2 = T_CONCAT(T_PREFIX, iter_create)(root2, POST);
   T_CONCAT(T_PREFIX, start)(it1);
   T_CONCAT(T_PREFIX, start)(it2);
   while (1) {
@@ -365,7 +413,7 @@ static void T_CONCAT(T_PREFIX, DEBUG_PRINT)(P_Node *root,
   }
   printf("\n\n");
 
-  P_Iter *it = T_CONCAT(T_PREFIX, iter_create)(root);
+  P_Iter *it = T_CONCAT(T_PREFIX, iter_create)(root, POST);
   for (T_CONCAT(T_PREFIX, begin)(it); !T_CONCAT(T_PREFIX, end)(it);
        T_CONCAT(T_PREFIX, next)(it)) {
     v_print(it->tail->value);
