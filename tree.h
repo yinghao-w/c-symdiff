@@ -63,6 +63,8 @@
  *
  */
 
+
+/* So the code in this file gets highlighted */
 #ifndef T_PREFIX
 #ifndef T_TYPE
 typedef int T_DEBUG_TYPE;
@@ -78,6 +80,9 @@ typedef int T_DEBUG_TYPE;
 #define T_CONCAT_2(A, B) A##_##B
 #define T_CONCAT(A, B) T_CONCAT_2(A, B)
 
+/* Optionally define a separate prefix to use for the node and iterator
+ * structs. If not defined, uses the usual prefix. So functions can all be
+ * snake_case, and structs can be Title_Case. */
 #ifndef T_STRUCT_PREFIX
 #define T_STRUCT_PREFIX T_PREFIX
 #endif
@@ -86,7 +91,7 @@ typedef int T_DEBUG_TYPE;
 
 #include <stdlib.h>
 
-/* --------------------------------*
+/* ------------------------------- *
  * BASIC DEFINITIONS AND FUNCTIONS *
  * ------------------------------- */
 
@@ -220,11 +225,13 @@ static P_Node *T_CONCAT(T_PREFIX, traverse)(P_Iter *it) {
   return it->tail;
 }
 
+/* The function corresponding to "begin" for adjacent node walking. Identical
+ * to begin in pre-order. */
 static P_Node *T_CONCAT(T_PREFIX, start)(P_Iter *it) {
   it->tail = it->root->parent;
   it->head = it->root;
   it->dir = LPARENT;
-  return T_CONCAT(T_PREFIX, traverse)(it);
+  return it->head;
 }
 
 static P_Node *T_CONCAT(T_PREFIX, next)(P_Iter *it) {
@@ -280,16 +287,17 @@ static void T_CONCAT(T_PREFIX, iter_apply)(P_Node *root, ORDER order,
                                            void (*func)(P_Node *, void *),
                                            void *ctx) {
   P_Iter *it = T_CONCAT(T_PREFIX, iter_create)(root, order);
-  for (T_CONCAT(T_PREFIX, begin)(it); !T_CONCAT(T_PREFIX, end)(it);
-       T_CONCAT(T_PREFIX, next)(it)) {
-    func(it->tail, ctx);
+  P_Node *node;
+  for (node = T_CONCAT(T_PREFIX, begin)(it); !T_CONCAT(T_PREFIX, end)(it);
+       node = T_CONCAT(T_PREFIX, next)(it)) {
+    func(node, ctx);
   }
   free(it);
 }
 
 static size_t T_CONCAT(T_PREFIX, height)(P_Node *root) {
-  P_Iter *it = T_CONCAT(T_PREFIX, iter_create)(root, POST);
-  size_t height = 1;
+  P_Iter *it = T_CONCAT(T_PREFIX, iter_create)(root, PRE);
+  size_t height = 0;
   size_t max = 1;
   for (T_CONCAT(T_PREFIX, start)(it); !T_CONCAT(T_PREFIX, end)(it);
        T_CONCAT(T_PREFIX, traverse)(it)) {
@@ -333,6 +341,8 @@ static int T_CONCAT(T_PREFIX, is_equal)(P_Node *root1, P_Node *root2,
   P_Iter *it2 = T_CONCAT(T_PREFIX, iter_create)(root2, POST);
   T_CONCAT(T_PREFIX, start)(it1);
   T_CONCAT(T_PREFIX, start)(it2);
+  T_CONCAT(T_PREFIX, next)(it1);
+  T_CONCAT(T_PREFIX, next)(it2);
   while (1) {
     if (!v_is_equal(it1->tail->value, it2->tail->value)) {
       return_val = 0;
