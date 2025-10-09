@@ -1,5 +1,5 @@
+#define T_DEBUG
 #include "ast.c"
-#include "ast.h"
 #include "lexer.h"
 #include "symbols.h"
 #include <stdio.h>
@@ -38,11 +38,25 @@ void test_shunting_yard(void) {
 	;
 }
 
+void token_print(Token token) {
+	switch (token.token_type) {
+		case SCALAR:
+			printf("%.f", token.scalar);
+			break;
+		case VAR:
+			printf("%c", token.var);
+			break;
+		case OPR:
+			printf("%c", token.opr->repr[0]);
+			break;
+	}
+}
+
 void test_ast_create(void) {
   char s[] = "3 *(x+ 2)";
   Ast_Node *expr = ast_create(s);
   assert(expr->value.token_type == OPR);
-  assert(expr->lchild->value.scalar - 3 < 0.01);
+  assert(expr->lchild->value.scalar == 3);
   assert(expr->rchild->lchild->value.var == 'x');
   printf("%s passed\n", __func__);
 }

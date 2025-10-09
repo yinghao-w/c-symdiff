@@ -350,6 +350,7 @@ static int T_CONCAT(T_PREFIX, is_equal)(P_Node *root1, P_Node *root2,
     }
     if (it1->dir != it2->dir) {
       return_val = 0;
+	  break;
     }
     T_CONCAT(T_PREFIX, traverse)(it1);
     T_CONCAT(T_PREFIX, traverse)(it2);

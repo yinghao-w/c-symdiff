@@ -9,37 +9,21 @@
 #define TISSCALAR(node) (TTYPE(node) == SCALAR)
 #define TISOPR(node) (TTYPE(node) == OPR)
 
-/* TODO: make this better */
-/* weird stuff if old is a root */
-static void ast_replace(Ast_Node *old, Ast_Node *new, int destroy) {
-  if (new->parent) {
-    ast_detach(new);
+static void ast_overwrite(Ast_Node *old, Ast_Node *new, int destroy) {
+  if (old->lchild) {
+    ast_detach(old->lchild);
+    destroy ? ast_destroy(old->lchild), 0 : 0;
   }
-  if (old->parent) {
-    int slot;
-    if (old->parent->lchild == old) {
-      slot = 0;
-    } else {
-      slot = 1;
-    }
-    ast_detach(old);
-    if (slot == 0) {
-      old->parent->lchild = new;
-    } else {
-      old->parent->rchild = new;
-    }
-  } else {
-    old->value = new->value;
-    old->lchild = new->lchild;
-    old->rchild = new->rchild;
-    free(new);
+  if (old->rchild) {
+    ast_detach(old->rchild);
+    destroy ? ast_destroy(old->rchild), 0 : 0;
   }
-  if (destroy) {
-    ast_destroy(old);
-  }
+  old->value = new->value;
+  old->lchild = new->lchild;
+  old->rchild = new->rchild;
 }
 
-/* Changed is the output parameter for if a transform or several transforms
+/* Caanged is the output parameter for if a transform or several transforms
  * changed the tree, order is the preferred order to iteratively apply the
  * transform to each node of the tree. Pre-order transforms propagate upwards,
  * post-order transforms propagate downwards. */
@@ -59,13 +43,16 @@ void eval(Ast_Node *expr, void *ctx) {
   if (TISOPR(expr)) {
     if (TOPR(expr)->arity == 1 && TISSCALAR(expr->lchild)) {
       TTYPE(expr) = SCALAR;
-      TSCALAR(expr) = TOPR(expr)->func(&TSCALAR(expr->lchild));
+      TSCALAR(expr) = (TOPR(expr)->func)(&TSCALAR(expr->lchild));
+      ast_destroy(expr->lchild);
       base->changed = 1;
     } else if (TOPR(expr)->arity == 2 && TISSCALAR(expr->lchild) &&
-               TISSCALAR(expr->lchild)) {
+               TISSCALAR(expr->rchild)) {
       TTYPE(expr) = SCALAR;
       Scalar arr[2] = {TSCALAR(expr->lchild), TSCALAR(expr->rchild)};
-      TSCALAR(expr) = TOPR(expr)->func(arr);
+      TSCALAR(expr) = (TOPR(expr)->func)(arr);
+      ast_destroy(expr->lchild);
+      ast_destroy(expr->rchild);
       base->changed = 1;
     }
   }
@@ -85,10 +72,10 @@ void id_apply(Ast_Node *expr, void *ctx) {
   ctx_simpl->base.changed = 0;
   if (TISOPR(expr) && TOPR(expr) == opr) {
     if (TISSCALAR(expr->lchild) && TSCALAR(expr->lchild) == id) {
-      ast_replace(expr, expr->rchild, 1);
+      ast_overwrite(expr, expr->rchild, 1);
       ctx_simpl->base.changed = 1;
     } else if (TISSCALAR(expr->rchild) && TSCALAR(expr->rchild) == id) {
-      ast_replace(expr, expr->lchild, 1);
+      ast_overwrite(expr, expr->lchild, 1);
       ctx_simpl->base.changed = 1;
     }
   }
@@ -101,30 +88,72 @@ void absorpt_apply(Ast_Node *expr, void *ctx) {
   ctx_simpl->base.changed = 0;
   if (TISOPR(expr) && TOPR(expr) == opr) {
     if (TISSCALAR(expr->lchild) && TSCALAR(expr->lchild) == id) {
-      ast_replace(expr, expr->lchild, 1);
+      ast_overwrite(expr, expr->lchild, 1);
       ctx_simpl->base.changed = 1;
     } else if (TISSCALAR(expr->rchild) && TSCALAR(expr->rchild) == id) {
-      ast_replace(expr, expr->rchild, 1);
+      ast_overwrite(expr, expr->rchild, 1);
       ctx_simpl->base.changed = 1;
     }
   }
 }
 
 struct ctx_match {
-	struct ctx_base base;
-	Ast_Node *pattern;
-	Ast_Node *replacement;
+  struct ctx_base base;
+  Ast_Node *pattern;
+  Ast_Node *replacement;
 };
 
-int pat_var_match(Var x, Ast_Node *expr);
+static int patt_var_match(Var x, Ast_Node *expr) {
+  switch (x) {
+  case '#':
+    return TISSCALAR(expr);
+  default:
+    return 1;
+  }
+}
+
+static int patt_match(Ast_Node *patt, Ast_Node *expr, Token **table_placeholder) {
+  switch (TTYPE(patt)) {
+  case SCALAR:
+    return TSCALAR(patt) == TSCALAR(expr);
+    break;
+  case VAR:
+    if (patt_var_match(TVAR(patt), expr)) {
+		*table_placeholder = NULL;
+		// set (key, value) to (patt_var, expr)
+		return 1;
+	} else {
+		return 0;
+	}
+    break;
+  case OPR:
+    return TOPR(patt) == TOPR(expr);
+    break;
+  }
+}
 
 void match_apply(Ast_Node *expr, void *ctx) {
-	struct ctx_match *ctx_match = (struct ctx_match *) ctx;
-	Ast_Node *pattern = ctx_match->pattern;
-	Ast_Node *replacement = ctx_match->replacement;
-	;
-	Ast_Node *copy = ast_copy(replacement);
-	return;
+  struct ctx_match *ctx_match = (struct ctx_match *)ctx;
+  Ast_Node *pattern = ctx_match->pattern;
+  Ast_Node *replacement = ctx_match->replacement;
 
+  Ast_Iter *it_expr = ast_iter_create(expr, PRE);
+  Ast_Iter *it_patt = ast_iter_create(pattern, PRE);
+  ast_begin(it_expr);
+  ast_begin(it_patt);
+  while (1) {
+    if (it_expr->dir != it_patt->dir) {
+      break;
+    }
+    if (patt_match(it_patt->head, it_expr->head, NULL)) {
+      break;
+    }
+    ast_traverse(it_expr);
+    ast_traverse(it_patt);
+  }
+  free(it_expr);
+  free(it_patt);
 
+  Ast_Node *copy = ast_copy(replacement);
+  return;
 }

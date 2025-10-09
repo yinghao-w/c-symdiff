@@ -6,12 +6,25 @@
 
 DPX_map *DPX_opr_set;
 
-void opr_set_init() {
+static float add(float args[]) {
+	return args[0] + args[1];
+}
+static float sub(float args[]) {
+	return args[0] - args[1];
+}
+static float mul(float args[]) {
+	return args[0] * args[1];
+}
+static float divi(float args[]) {
+	return args[0] / args[1];
+}
+
+void opr_set_init(void) {
   DPX_opr_set = DPX_create(1);
-  DPX_add('+', (Opr){"+", 2, 1, NULL}, DPX_opr_set);
-  DPX_add('-', (Opr){"-", 2, 1, NULL}, DPX_opr_set);
-  DPX_add('*', (Opr){"*", 2, 2, NULL}, DPX_opr_set);
-  DPX_add('/', (Opr){"/", 2, 2, NULL}, DPX_opr_set);
+  DPX_add('+', (Opr){"+", 2, 1, add}, DPX_opr_set);
+  DPX_add('-', (Opr){"-", 2, 1, sub}, DPX_opr_set);
+  DPX_add('*', (Opr){"*", 2, 2, mul}, DPX_opr_set);
+  DPX_add('/', (Opr){"/", 2, 2, divi}, DPX_opr_set);
   DPX_add('^', (Opr){"^", 2, 3, NULL}, DPX_opr_set);
   DPX_add('@', (Opr){"@", 1, 4, NULL}, DPX_opr_set);
   DPX_add('(', (Opr){"(", 0, 0, NULL}, DPX_opr_set);
