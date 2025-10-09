@@ -1,10 +1,10 @@
 CC = gcc
-CFLAGS = -std=c99 -g -Wall -Wextra -Wpedantic
+CFLAGS = -std=c11 -g -Wall -Wextra -Wpedantic -Wno-unused-function
 TESTS = tree_test symbols_test lexer_test
 
 
 all: $(TESTS)
-	# $(foreach f, $^, ./$(f).out;)
+	$(foreach f, $^, ./$(f).out;)
 
 clean:
 		rm -fr *.out

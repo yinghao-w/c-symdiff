@@ -1,5 +1,4 @@
 #include "../symbols.c"
-#include "../symbols.h"
 #include <assert.h>
 #include <stdio.h>
 
