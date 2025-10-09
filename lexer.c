@@ -51,15 +51,20 @@ static int white_space_match(const char *restrict s0, const char *restrict s1) {
   return 1;
 }
 
+static void l_strip(char *remainder[]) {
+  while (isspace(**remainder)) {
+    (*remainder)++;
+  }
+}
+
 typedef enum {
   MATCHSUCCESS,
   MATCHERROR,
-  MATCHWHITESPACE,
 } MATCHCODE;
 
 /* Attempts to match the largest string possible from *remainder onwards to a
  * token type. If successful, outputs with the token parameter and returns 0. */
-static int match(char *remainder[], Token *token) {
+static MATCHCODE match(char *remainder[], Token *token) {
   char *start = *remainder;
   char *best = start;
   char *end = start;
@@ -109,6 +114,8 @@ static int match(char *remainder[], Token *token) {
 Token *lexer(char s[]) {
   Token *tokens = NULL;
   char **remainder = &s;
+  l_strip(remainder);
+
   while (**remainder) {
     Token token;
     int matched = match(remainder, &token);
@@ -117,6 +124,7 @@ Token *lexer(char s[]) {
       break;
     } else {
       fp_push(token, tokens);
+	  l_strip(remainder);
     }
   }
   return tokens;

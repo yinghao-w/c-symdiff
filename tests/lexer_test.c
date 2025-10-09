@@ -59,7 +59,7 @@ void test_match(void) {
 }
 
 void test_lexer(void) {
-  char s[] = "1+3.2/x";
+  char s[] = " 1 +3.2/ x  ";
   Token *tokens = lexer(s);
   assert(fp_length(tokens) == 5);
   assert(tokens[0].scalar - 1 < epsilon);
