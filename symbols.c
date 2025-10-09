@@ -12,8 +12,10 @@ void opr_set_init() {
   DPX_add('-', (Opr){"-", 2, 1, NULL}, DPX_opr_set);
   DPX_add('*', (Opr){"*", 2, 2, NULL}, DPX_opr_set);
   DPX_add('/', (Opr){"/", 2, 2, NULL}, DPX_opr_set);
-  DPX_add('(', (Opr){"(", 2, 0, NULL}, DPX_opr_set);
-  DPX_add(')', (Opr){")", 2, 0, NULL}, DPX_opr_set);
+  DPX_add('^', (Opr){"^", 2, 3, NULL}, DPX_opr_set);
+  DPX_add('@', (Opr){"@", 1, 4, NULL}, DPX_opr_set);
+  DPX_add('(', (Opr){"(", 0, 0, NULL}, DPX_opr_set);
+  DPX_add(')', (Opr){")", 0, 0, NULL}, DPX_opr_set);
 }
 
 Opr *opr_get(const char s) { return DPX_addr(s, DPX_opr_set); }

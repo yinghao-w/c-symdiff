@@ -5,13 +5,10 @@
 #include "symbols.h"
 
 #define T_TYPE Token
-#define T_PREFIX tok
-#include "../c-generics/tree.h"
+#define T_PREFIX ast
+#define T_STRUCT_PREFIX Ast
+#include "tree.h"
 
-tok_Node *shunting_yard(char s[]);
-
-Scalar ast_eval(tok_Node *node);
-
-void ast_sub(tok_Node *old_node, tok_Node *new_node);
+Ast_Node *ast_create(char expr[]);
 
 #endif

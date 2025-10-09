@@ -1,78 +1,39 @@
-#include <assert.h>
-#include <ctype.h>
-
-#include "../c-generics/fat_pointer.h"
 #include "ast.h"
+#include "../c-generics/fat_pointer.h"
+#include "lexer.h"
 #include "symbols.h"
+#include <assert.h>
 
 #define fp_peek(darray) darray[fp_length(darray) - 1]
 
-static int is_num(const char *s) {
-  /* if s is just a single non digit char, then operator or garbage */
-  if (!isdigit(*s) && *(s + 1) == '\0') {
-    return 0;
-  }
-  /* if first char is non digit and not +-, then operator or garbage */
-  if (!isdigit(*s) && *s != '+' && *s != '-') {
-    return 0;
-  }
-  /* if latter chars contain non-digits, garbage */
-  while (*++s != '\0') {
-    if (!isdigit(*s) && *s != '.') {
-      return 0;
-    }
-  }
-  return 1;
-}
-
-Token tokenify(const char s[]) {
-  Token token;
-  if (get_opr(s) != NULL) {
-    token.token_type = OPR;
-    token.opr = get_opr(s);
-  } else if (is_num(s)) {
-    token.token_type = SCALAR;
-    token.scalar = atof(s);
-  } else {
-    token.token_type = VAR;
-    token.var = *s;
-  }
-  return token;
-}
-
-/* Takes the top operator of the oprs stack, builds a tree node with value
- * operator, and arity number of children from the top of the out stack. Pushes
- * the new node onto the out stack. */
-static void build(tok_Node **out, Token *oprs) {
+/* Takes an operator and builds a tree node with value operator, and arity
+ * number of children from the top of the out stack. Pushes the new node onto
+ * the out stack. */
+static void build(Ast_Node *out[], Token *oprs) {
   Token opr = fp_pop(oprs);
-  tok_Node *node;
+  Ast_Node *node = NULL;
   if (opr.opr->arity == 1) {
-    node = tok_join(opr, fp_pop(out), NULL);
+    node = ast_join(opr, fp_pop(out), NULL);
   } else if (opr.opr->arity == 2) {
-    tok_Node *rchild = fp_pop(out);
-    tok_Node *lchild = fp_pop(out);
-    node = tok_join(opr, lchild, rchild);
+    Ast_Node *rchild = fp_pop(out);
+    Ast_Node *lchild = fp_pop(out);
+    node = ast_join(opr, lchild, rchild);
   }
   fp_push(node, out);
 }
 
 /* Shunting yard algorithm */
-tok_Node *shunting_yard(char expr[]) {
+static Ast_Node *shunting_yard(Token tokens[]) {
   /* Initialises operator stack and output stack. Output stack consists of nodes
    * and should be at most 2 elements always? */
   Token *oprs = NULL;
-  tok_Node **out = NULL;
+  Ast_Node **out = NULL;
 
-  /* TODO: Use safer functions */
-  int len = strlen(expr);
-  char *s = malloc(len + 1);
-  strcpy(s, expr);
-  char *str_token = strtok(s, " ");
-  for (int i = 0; str_token != NULL; str_token = strtok(NULL, " ")) {
-    Token token = tokenify(str_token);
+  for (size_t i = 0; i < fp_length(tokens); i++) {
+    Token token = tokens[i];
 
     if (token.token_type != OPR) {
-      tok_Node *node = tok_leaf(token);
+      Ast_Node *node = ast_leaf(token);
       fp_push(node, out);
 
     } else if (token.token_type == OPR) {
@@ -81,7 +42,7 @@ tok_Node *shunting_yard(char expr[]) {
 
       } else if (token.opr->arity == 2) {
         while ((fp_length(oprs) > 0) && !(fp_peek(oprs).opr->repr[0] == '(') &&
-               (oprcmp(fp_peek(oprs).opr, token.opr) >= 0)) {
+               (opr_cmp(fp_peek(oprs).opr, token.opr) >= 0)) {
           build(out, oprs);
         }
         fp_push(token, oprs);
@@ -95,7 +56,7 @@ tok_Node *shunting_yard(char expr[]) {
           build(out, oprs);
         }
         assert(fp_peek(oprs).opr->repr[0] == '(');
-        fp_pop(oprs);
+        (void)fp_pop(oprs);
 
         if ((fp_length(oprs) > 0) && (fp_peek(oprs).opr->arity == 1)) {
           build(out, oprs);
@@ -107,22 +68,64 @@ tok_Node *shunting_yard(char expr[]) {
     assert(fp_peek(oprs).opr->repr[0] != '(');
     build(out, oprs);
   }
-  free(s);
   fp_destroy(oprs);
-  tok_Node *root = fp_pop(out);
+  Ast_Node *root = fp_pop(out);
   fp_destroy(out);
   return root;
 }
+Ast_Node *ast_create(char expr[]) { return shunting_yard(lexer(expr)); }
 
-void ast_sub(tok_Node *old_node, tok_Node *new_node) {
-  if (old_node->parent == NULL) {
-    return;
+static int tok_cmp(Token t1, Token t2) {
+  if (t1.token_type != t2.token_type) {
+    return 0;
+  } else {
+    switch (t1.token_type) {
+    case SCALAR:
+      return t1.scalar - t2.scalar < 0.01;
+      break;
+    case VAR:
+      return t1.var == t2.var;
+      break;
+    case OPR:
+      return t1.opr == t2.opr;
+      break;
+    }
   }
-  if (old_node == old_node->parent->lchild) {
-    old_node->parent->lchild = new_node;
-  } else if (old_node == old_node->parent->rchild) {
-    old_node->parent->rchild = new_node;
+}
+
+int ast_expr_is_equal(Ast_Node *expr1, Ast_Node *expr2) {
+  return ast_is_equal(expr1, expr2, tok_cmp);
+}
+
+Ast_Node *ast_copy(Ast_Node *expr) {
+  Ast_Node *copy_root = ast_join(expr->value, NULL, NULL);
+  Ast_Node *copy_curr = copy_root;
+  Ast_Iter *it = ast_iter_create(expr, PRE);
+  Ast_Node *node;
+  for (ast_start(it), node = ast_traverse(it); !ast_end(it);
+       node = ast_traverse(it)) {
+    switch (it->dir) {
+    case LCHILD:
+      copy_curr->parent = ast_join(node->value, NULL, NULL);
+      copy_curr->parent->lchild = copy_curr;
+      copy_curr = copy_curr->parent;
+      break;
+    case RCHILD:
+      copy_curr->parent = ast_join(node->value, NULL, NULL);
+      copy_curr->parent->rchild = copy_curr;
+      copy_curr = copy_curr->parent;
+      break;
+    case LPARENT:
+      copy_curr->lchild = ast_join(node->value, NULL, NULL);
+      copy_curr->lchild->parent = copy_curr;
+      copy_curr = copy_curr->lchild;
+      break;
+    case RPARENT:
+      copy_curr->rchild = ast_join(node->value, NULL, NULL);
+      copy_curr->rchild->parent = copy_curr;
+      copy_curr = copy_curr->rchild;
+      break;
+    }
   }
-  new_node->parent = old_node->parent;
-  old_node->parent = NULL;
+  return copy_root;
 }
