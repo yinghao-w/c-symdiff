@@ -1,4 +1,4 @@
-#include "../symbols.c"
+#include "symbols.c"
 #include <assert.h>
 #include <stdio.h>
 

@@ -6,7 +6,7 @@
 #define T_PREFIX i
 #define T_STRUCT_PREFIX I
 #define T_DEBUG
-#include "../tree.h"
+#include "tree.h"
 
 #define ASSERT_STRUCT(cond, struct_val, printer_fn)                            \
   do {                                                                         \

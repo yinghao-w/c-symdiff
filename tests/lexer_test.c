@@ -1,4 +1,4 @@
-#include "../lexer.c"
+#include "lexer.c"
 #include <assert.h>
 #include <stdio.h>
 
