@@ -6,12 +6,15 @@
 #endif
 
 #include <stdlib.h>
+#include <string.h>
 
 typedef struct DPX_map DPX_map;
 
 static DPX_map *DPX_create(size_t cap);
 
 static DPX_VT DPX_get(DPX_KT key, const DPX_map *map);
+
+static DPX_VT *DPX_addr(DPX_KT key, const DPX_map *map);
 
 static void DPX_add(DPX_KT key, DPX_VT value, DPX_map *map);
 
@@ -36,7 +39,7 @@ static DPX_map *DPX_create(size_t cap) {
 	DPX_map *p = malloc(sizeof(*p));
 	p->size = 0;
 	p->cap = cap;
-	p->data = malloc(cap * sizeof(*(p->data)));
+	p->data = malloc(cap * sizeof(*p->data));
 	return p;
 }
 
@@ -55,7 +58,18 @@ static DPX_VT DPX_get(DPX_KT key, const DPX_map *map) {
 			return map->data[i].value;
 		}
 	}
-	return (DPX_VT)(0);
+	DPX_VT temp;
+	memset(&temp, 0, sizeof(DPX_VT));
+	return temp;
+}
+
+static DPX_VT *DPX_addr(DPX_KT key, const DPX_map *map) {
+	for (size_t i = 0; i < DPX_size(map); i++) {
+		if (map->data[i].key == key) {
+			return &map->data[i].value;
+		}
+	}
+	return NULL;
 }
 
 void DPX_add(DPX_KT key, DPX_VT value, DPX_map *map) {
@@ -67,8 +81,9 @@ void DPX_add(DPX_KT key, DPX_VT value, DPX_map *map) {
   }
   if (map->size >= map->cap) {
 	  map->data = realloc(map->data, 2 * map->cap * sizeof(*map->data));
+	  map->cap *= 2;
   }
-  map->data[map->size++] = {.key = key, .value = value};
+  map->data[map->size++] = (DPX_bucket) {.key = key, .value = value};
 
 }
 

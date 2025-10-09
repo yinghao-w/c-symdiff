@@ -8,18 +8,16 @@ typedef char Var;
 typedef struct {
   char repr[4];
   int arity;
+  int precedence;
   float (*func)(float *args);
 } Opr;
 
-typedef Opr ms_set[];
-
-int in_set(const ms_set);
-Opr *get_opr(const char s[]);
-Opr opr_get(const char s[], DPX_map *set)
+void opr_set_init(void);
+Opr *opr_get(const char s);
 
 /* Return 1 if opr1 is higher precedence than opr2, -1 if opr is lower
  * precedence, and 0 if equal, i.e. >  */
-int oprcmp(const Opr *opr1, const Opr *opr2);
+int opr_cmp(const Opr *opr1, const Opr *opr2);
 
 typedef enum { SCALAR, VAR, OPR } TOKEN_TYPE;
 

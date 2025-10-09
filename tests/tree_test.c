@@ -6,11 +6,10 @@
 #define T_PREFIX i
 #define T_STRUCT_PREFIX I
 #define T_DEBUG
-#include "tree.h"
+#include "../tree.h"
 
 #define ASSERT_STRUCT(cond, struct_val, printer_fn)                            \
   do {                                                                         \
-                                                                               \
     if (!(cond)) {                                                             \
       printf("Assertion failed: %s\n", #cond);                                 \
       printf("In file %s, function %s, line %d\n", __FILE__, __func__,         \
@@ -37,11 +36,6 @@ void iter_print(I_Iter *it) {
   printf("\nD:  %d", it->dir);
   printf("\n");
 }
-
-/*
-ASSERT_STRUCT(, , tree_print);
-  printf("test_ passed\n");
-*/
 
 void test_leaf(void) {
   I_Node *node = i_leaf(12);
@@ -271,15 +265,6 @@ void test_is_equal() {
   printf("%s passed\n", __func__);
 }
 
-
-
-
-
-//----------------------------------------------------------------
-//------------------------------------------------------------------
-//-----------------------------------------------------------------
-
-
 void test_begin_pre() {
   TEST_TREE_SETUP();
   I_Iter *it = i_iter_create(node7, PRE);
@@ -352,18 +337,8 @@ void test_iter_pre() {
   printf("%s passed\n", __func__);
 }
 
-
-
-
-
-
-
-
-
-
-
 void run_tests(void) {
-  printf("%s\n\n", __FILE__);
+  printf("\n\n%s\n\n", __FILE__);
   test_leaf();
   test_join();
   test_height();
