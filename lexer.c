@@ -1,4 +1,5 @@
 #include "lexer.h"
+#include "string.h"
 #include "../c-generics/fat_pointer.h"
 #include "symbols.h"
 #include <ctype.h>
@@ -57,6 +58,17 @@ static void l_strip(char *remainder[]) {
   }
 }
 
+
+/* Returns the atof of the string section between s0 and s1 only. In case
+ * *remainder is a rvalue, copies the matched section into a temporary buffer,
+ * and null terminates that section so atof scans that section only. */
+static float sec_atof(const char *restrict s0, const char *restrict s1) {
+	char temp[s1 - s0 + 1];
+	strncpy(temp, s0, s1 - s0);
+	temp[s1 - s0] = '\0';
+	return atof(temp);
+}
+
 typedef enum {
   MATCHSUCCESS,
   MATCHERROR,
@@ -90,13 +102,10 @@ static MATCHCODE match(char *remainder[], Token *token) {
   } else {
 
     token->token_type = best_type;
-    char temp;
+
     switch (best_type) {
     case SCALAR:
-      temp = *best;
-      *best = '\0';
-      token->scalar = atof(start);
-      *best = temp;
+	  token->scalar = sec_atof(start, best);
       break;
     case VAR:
       token->var = *start;

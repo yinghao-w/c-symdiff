@@ -187,22 +187,16 @@ void test_lexer_2(void) {
 }
 
 void test_ast_expr_is_equal(void) {
-  char s[] = "  @(7- 5.2)";
-  char t[] = "@ ( 7 - 5.2) ";
-  Ast_Node *ast_s = ast_create(s);
-  Ast_Node *ast_t = ast_create(t);
+  Ast_Node *ast_s = ast_create("  @(7- 5.2)");
+  Ast_Node *ast_t = ast_create("@ ( 7 - 5.2) ");
   assert(ast_expr_is_equal(ast_s, ast_t));
 
-  char u[] = "@ ( 7 / 5.2) ";
-  Ast_Node *ast_u = ast_create(u);
+  Ast_Node *ast_u = ast_create("@ (7 / 5.2)  ");
   assert(!ast_expr_is_equal(ast_s, ast_u));
 
-  char a[] = "1 + x + 3";
-  char b[] = "1 + 3 + x";
-  char c[] = "1 + (x + 3)";
-  Ast_Node *ast_a = ast_create(a);
-  Ast_Node *ast_b = ast_create(b);
-  Ast_Node *ast_c = ast_create(c);
+  Ast_Node *ast_a = ast_create("1 + x + 3");
+  Ast_Node *ast_b = ast_create("1 + 3 + x");
+  Ast_Node *ast_c = ast_create("1 + (x + 3)");
   assert(!ast_expr_is_equal(ast_a, ast_b));
   assert(!ast_expr_is_equal(ast_a, ast_c));
 
