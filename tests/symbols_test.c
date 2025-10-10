@@ -2,11 +2,11 @@
 #include <assert.h>
 #include <stdio.h>
 
-extern DPX_map *DPX_opr_set;
+extern OpMap *opr_set;
 
 void test_opr_set_init(void) {
   opr_set_init();
-  DPX_bucket *buckets = DPX_opr_set->data;
+  OpBucket *buckets = opr_set->data;
   assert(buckets[0].key == '+');
   assert(buckets[4].key == '^');
   assert(buckets[3].value.arity == 2);

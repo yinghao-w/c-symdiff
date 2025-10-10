@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 #define TEST_EXPR_SETUP()                                                      \
-  char s[] = "(4) - 9";                                                          \
+  char s[] = "(4) - 9";                                                        \
   Ast_Node *expr = ast_create(s);
 
 void test_eval(void) {
