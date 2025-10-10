@@ -64,6 +64,8 @@ static Ast_Node *shunting_yard(Token tokens[]) {
       }
     }
   }
+  fp_destroy(tokens);
+
   while (fp_length(oprs) > 0) {
     assert(fp_peek(oprs).opr->repr[0] != '(');
     build(out, oprs);
@@ -122,5 +124,7 @@ Ast_Node *ast_copy(Ast_Node *expr) {
     }
     ast_traverse(it2);
   }
+  free(it1);
+  free(it2);
   return copy_root;
 }

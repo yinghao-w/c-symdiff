@@ -191,7 +191,7 @@ static P_Iter *T_CONCAT(T_PREFIX, iter_create)(P_Node *root, ORDER order) {
 }
 
 /* Walks the tree one adjacent node at a time, depth first and left to right. */
-static P_Node *T_CONCAT(T_PREFIX, traverse)(P_Iter *it) {
+static void T_CONCAT(T_PREFIX, traverse)(P_Iter *it) {
   if (it->tail == it->root && it->tail->parent == it->head) {
     it->tail = NULL;
   } else {
@@ -220,7 +220,6 @@ static P_Node *T_CONCAT(T_PREFIX, traverse)(P_Iter *it) {
     }
     it->dir = T_CONCAT(T_PREFIX, tail_dir)(it->tail, it->head);
   }
-  return it->tail;
 }
 
 /* The function corresponding to "begin" for adjacent node walking. Identical
