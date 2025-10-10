@@ -167,7 +167,7 @@ void test_exprs_setup(void) {
 
 void test_exprs_teardown(void) {
 	for (int i = 0; i < NUM_EXPRS; i++) {
-		free(test_exprs_all[i].tree);
+		ast_destroy(test_exprs_all[i].tree);
 	}
 }
 
@@ -181,6 +181,7 @@ void test_lexer_2(void) {
     for (int j = 0; j < fp_length(tokens); j++) {
       ASSERT_TOKEN_EQUAL(tokens[j], test_exprs_all[0].tokens[j]);
     }
+	fp_destroy(tokens);
   }
   printf("%s passed\n", __func__);
 }
@@ -188,14 +189,29 @@ void test_lexer_2(void) {
 void test_ast_expr_is_equal(void) {
   char s[] = "  @(7- 5.2)";
   char t[] = "@ ( 7 - 5.2) ";
-  assert(ast_expr_is_equal(ast_create(s), ast_create(t)));
+  Ast_Node *ast_s = ast_create(s);
+  Ast_Node *ast_t = ast_create(t);
+  assert(ast_expr_is_equal(ast_s, ast_t));
+
   char u[] = "@ ( 7 / 5.2) ";
-  assert(!ast_expr_is_equal(ast_create(s), ast_create(u)));
+  Ast_Node *ast_u = ast_create(u);
+  assert(!ast_expr_is_equal(ast_s, ast_u));
+
   char a[] = "1 + x + 3";
   char b[] = "1 + 3 + x";
   char c[] = "1 + (x + 3)";
-  assert(!ast_expr_is_equal(ast_create(a), ast_create(b)));
-  assert(!ast_expr_is_equal(ast_create(a), ast_create(c)));
+  Ast_Node *ast_a = ast_create(a);
+  Ast_Node *ast_b = ast_create(b);
+  Ast_Node *ast_c = ast_create(c);
+  assert(!ast_expr_is_equal(ast_a, ast_b));
+  assert(!ast_expr_is_equal(ast_a, ast_c));
+
+  ast_destroy(ast_s);
+  ast_destroy(ast_t);
+  ast_destroy(ast_u);
+  ast_destroy(ast_a);
+  ast_destroy(ast_b);
+  ast_destroy(ast_c);
   printf("%s passed\n", __func__);
 }
 
@@ -204,6 +220,7 @@ void test_shunting_yard(void) {
     Ast_Node *expr = shunting_yard(lexer(test_exprs_all[i].s));
     Ast_Node *expected = test_exprs_all[i].tree;
     assert(ast_expr_is_equal(expr, expected));
+	ast_destroy(expr);
   }
   printf("%s passed\n", __func__);
 }
@@ -213,6 +230,7 @@ void test_ast_create(void) {
     Ast_Node *expr = ast_create(test_exprs_all[i].s);
     Ast_Node *expected = test_exprs_all[i].tree;
     assert(ast_expr_is_equal(expr, expected));
+	ast_destroy(expr);
   }
   printf("%s passed\n", __func__);
 }
@@ -221,6 +239,7 @@ void test_ast_copy(void) {
   for (int i = 0; i < NUM_EXPRS; i++) {
     Ast_Node *copy = ast_copy(test_exprs_all[i].tree);
     assert(ast_expr_is_equal(copy, test_exprs_all[i].tree));
+	ast_destroy(copy);
   }
   printf("%s passed\n", __func__);
 }
@@ -236,7 +255,6 @@ void run_tests(void) {
   test_tok_cmp();
   test_ast_copy();
   test_exprs_teardown();
-  ;
 }
 
 int main(void) {
