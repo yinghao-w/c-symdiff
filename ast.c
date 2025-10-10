@@ -98,34 +98,29 @@ int ast_expr_is_equal(Ast_Node *expr1, Ast_Node *expr2) {
 }
 
 Ast_Node *ast_copy(Ast_Node *expr) {
-  Ast_Node *copy_root = ast_join(expr->value, NULL, NULL);
-  Ast_Node *copy_curr = copy_root;
-  Ast_Iter *it = ast_iter_create(expr, PRE);
-  Ast_Node *node;
-  for (ast_start(it), node = ast_traverse(it); !ast_end(it);
-       node = ast_traverse(it)) {
-    switch (it->dir) {
+  Ast_Node *copy_root = ast_leaf(expr->value);
+  Ast_Iter *it1 = ast_iter_create(expr, PRE);
+  Ast_Iter *it2 = ast_iter_create(copy_root, PRE);
+  for (ast_start(it1), ast_start(it2), ast_traverse(it1); !ast_end(it1);
+       ast_traverse(it1)) {
+    switch (it1->dir) {
     case LCHILD:
-      copy_curr->parent = ast_join(node->value, NULL, NULL);
-      copy_curr->parent->lchild = copy_curr;
-      copy_curr = copy_curr->parent;
-      break;
     case RCHILD:
-      copy_curr->parent = ast_join(node->value, NULL, NULL);
-      copy_curr->parent->rchild = copy_curr;
-      copy_curr = copy_curr->parent;
       break;
     case LPARENT:
-      copy_curr->lchild = ast_join(node->value, NULL, NULL);
-      copy_curr->lchild->parent = copy_curr;
-      copy_curr = copy_curr->lchild;
+      if (!it2->head->lchild) {
+        it2->head->lchild = ast_leaf(it1->head->value);
+        it2->head->lchild->parent = it2->head;
+      }
       break;
     case RPARENT:
-      copy_curr->rchild = ast_join(node->value, NULL, NULL);
-      copy_curr->rchild->parent = copy_curr;
-      copy_curr = copy_curr->rchild;
+      if (!it2->head->rchild) {
+        it2->head->rchild = ast_leaf(it1->head->value);
+        it2->head->rchild->parent = it2->head;
+      }
       break;
     }
+    ast_traverse(it2);
   }
   return copy_root;
 }

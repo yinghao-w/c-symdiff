@@ -352,10 +352,10 @@ void run_tests(void) {
   test_iter();
   test_iter_apply();
   test_destroy();
-  test_is_equal();
   test_next_pre();
   test_begin_pre();
   test_iter_pre();
+  test_is_equal();
 }
 
 int main(void) {

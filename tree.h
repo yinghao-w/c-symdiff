@@ -63,7 +63,6 @@
  *
  */
 
-
 /* So the code in this file gets highlighted */
 #ifndef T_PREFIX
 #ifndef T_TYPE
@@ -195,7 +194,6 @@ static P_Iter *T_CONCAT(T_PREFIX, iter_create)(P_Node *root, ORDER order) {
 static P_Node *T_CONCAT(T_PREFIX, traverse)(P_Iter *it) {
   if (it->tail == it->root && it->tail->parent == it->head) {
     it->tail = NULL;
-    it->head = NULL;
   } else {
     it->tail = it->head;
     switch (it->dir) {
@@ -239,7 +237,7 @@ static P_Node *T_CONCAT(T_PREFIX, next)(P_Iter *it) {
     T_CONCAT(T_PREFIX, traverse)(it);
     switch (it->order) {
     case PRE:
-      if (!it->head) {
+      if (it->tail == it->root && (it->dir == LCHILD || it->dir == RCHILD)) {
         return NULL;
       } else if (it->dir == LPARENT || it->dir == RPARENT) {
         return it->head;
@@ -259,7 +257,7 @@ static P_Node *T_CONCAT(T_PREFIX, next)(P_Iter *it) {
 static int T_CONCAT(T_PREFIX, end)(P_Iter *it) {
   switch (it->order) {
   case PRE:
-    return !it->head;
+    return it->tail == it->root && (it->dir == LCHILD || it->dir == RCHILD);
     break;
   case POST:
     return !it->tail;
@@ -337,20 +335,18 @@ static void T_CONCAT(T_PREFIX, destroy)(P_Node *root) {
 static int T_CONCAT(T_PREFIX, is_equal)(P_Node *root1, P_Node *root2,
                                         int (*v_is_equal)(T_TYPE, T_TYPE)) {
   int return_val = 1;
-  P_Iter *it1 = T_CONCAT(T_PREFIX, iter_create)(root1, POST);
-  P_Iter *it2 = T_CONCAT(T_PREFIX, iter_create)(root2, POST);
+  P_Iter *it1 = T_CONCAT(T_PREFIX, iter_create)(root1, PRE);
+  P_Iter *it2 = T_CONCAT(T_PREFIX, iter_create)(root2, PRE);
   T_CONCAT(T_PREFIX, start)(it1);
   T_CONCAT(T_PREFIX, start)(it2);
-  T_CONCAT(T_PREFIX, next)(it1);
-  T_CONCAT(T_PREFIX, next)(it2);
   while (1) {
-    if (!v_is_equal(it1->tail->value, it2->tail->value)) {
+    if (!v_is_equal(it1->head->value, it2->head->value)) {
       return_val = 0;
       break;
     }
     if (it1->dir != it2->dir) {
       return_val = 0;
-	  break;
+      break;
     }
     T_CONCAT(T_PREFIX, traverse)(it1);
     T_CONCAT(T_PREFIX, traverse)(it2);
