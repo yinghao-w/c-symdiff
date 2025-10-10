@@ -1,26 +1,33 @@
 #include "ast.h"
 #include "symbols.h"
+#include <assert.h>
 
-#define TTYPE(node) (node->value.token_type)
-#define TSCALAR(node) (node->value.scalar)
-#define TVAR(node) (node->value.var)
-#define TOPR(node) (node->value.opr)
+#define T_TYPE(node) (node->value.token_type)
+#define T_SCALAR(node) (node->value.scalar)
+#define T_VAR(node) (node->value.var)
+#define T_OPR(node) (node->value.opr)
 
-#define TISSCALAR(node) (TTYPE(node) == SCALAR)
-#define TISOPR(node) (TTYPE(node) == OPR)
+#define T_IS_SCALAR(node) (T_TYPE(node) == SCALAR)
+#define T_IS_OPR(node) (T_TYPE(node) == OPR)
 
-static void ast_overwrite(Ast_Node *old, Ast_Node *new, int destroy) {
-  if (old->lchild) {
-    ast_detach(old->lchild);
-    destroy ? ast_destroy(old->lchild), 0 : 0;
+/* Replaces a new's parent with new. The dummy parent of each AST root allows
+ * this to be a replacement, not a overwriting. */
+static void ast_replace(Ast_Node *new) {
+  assert(new->parent);
+  assert(new->parent->parent);
+  Ast_Node *parent = new->parent;
+  Ast_Node *grandparent = parent->parent;
+  ast_detach(parent);
+  ast_detach(new);
+  ast_destroy(parent);
+  /* Assumes that a node will never have a rchild but no lchild. Might need to
+   * change below if the assumption changes. */
+  if (!grandparent->lchild) {
+	  grandparent->lchild = new;
+  } else {
+	  grandparent->rchild = new;
   }
-  if (old->rchild) {
-    ast_detach(old->rchild);
-    destroy ? ast_destroy(old->rchild), 0 : 0;
-  }
-  old->value = new->value;
-  old->lchild = new->lchild;
-  old->rchild = new->rchild;
+
 }
 
 /* Caanged is the output parameter for if a transform or several transforms
@@ -40,26 +47,29 @@ int recursive_apply(Ast_Node *expr, void trans(Ast_Node *, void *), void *ctx) {
 
 void eval(Ast_Node *expr, void *ctx) {
   struct ctx_base *base = (struct ctx_base *)ctx;
-  if (TISOPR(expr)) {
-    if (TOPR(expr)->arity == 1 && TISSCALAR(expr->lchild)) {
-      TTYPE(expr) = SCALAR;
-      TSCALAR(expr) = (TOPR(expr)->func)(&TSCALAR(expr->lchild));
+  if (T_IS_OPR(expr)) {
+    if (T_OPR(expr)->arity == 1 && T_IS_SCALAR(expr->lchild)) {
+      T_TYPE(expr) = SCALAR;
+      T_SCALAR(expr) = (T_OPR(expr)->func)(&T_SCALAR(expr->lchild));
       ast_destroy(expr->lchild);
+      expr->lchild = NULL;
       base->changed = 1;
-    } else if (TOPR(expr)->arity == 2 && TISSCALAR(expr->lchild) &&
-               TISSCALAR(expr->rchild)) {
-      TTYPE(expr) = SCALAR;
-      Scalar arr[2] = {TSCALAR(expr->lchild), TSCALAR(expr->rchild)};
-      TSCALAR(expr) = (TOPR(expr)->func)(arr);
+
+    } else if (T_OPR(expr)->arity == 2 && T_IS_SCALAR(expr->lchild) &&
+               T_IS_SCALAR(expr->rchild)) {
+      T_TYPE(expr) = SCALAR;
+      Scalar arr[2] = {T_SCALAR(expr->lchild), T_SCALAR(expr->rchild)};
+      T_SCALAR(expr) = (T_OPR(expr)->func)(arr);
       ast_destroy(expr->lchild);
       ast_destroy(expr->rchild);
+      expr->lchild = NULL;
+      expr->rchild = NULL;
       base->changed = 1;
     }
   }
 }
 
 struct ctx_simpl {
-  int changed;
   struct ctx_base base;
   Opr *opr;
   Scalar x;
@@ -70,12 +80,12 @@ void id_apply(Ast_Node *expr, void *ctx) {
   Opr *opr = ctx_simpl->opr;
   Scalar id = ctx_simpl->x;
   ctx_simpl->base.changed = 0;
-  if (TISOPR(expr) && TOPR(expr) == opr) {
-    if (TISSCALAR(expr->lchild) && TSCALAR(expr->lchild) == id) {
-      ast_overwrite(expr, expr->rchild, 1);
+  if (T_IS_OPR(expr) && T_OPR(expr) == opr) {
+    if (T_IS_SCALAR(expr->lchild) && T_SCALAR(expr->lchild) == id) {
+      ast_replace(expr->rchild);
       ctx_simpl->base.changed = 1;
-    } else if (TISSCALAR(expr->rchild) && TSCALAR(expr->rchild) == id) {
-      ast_overwrite(expr, expr->lchild, 1);
+    } else if (T_IS_SCALAR(expr->rchild) && T_SCALAR(expr->rchild) == id) {
+      ast_replace(expr->lchild);
       ctx_simpl->base.changed = 1;
     }
   }
@@ -86,12 +96,12 @@ void absorpt_apply(Ast_Node *expr, void *ctx) {
   Opr *opr = ctx_simpl->opr;
   Scalar id = ctx_simpl->x;
   ctx_simpl->base.changed = 0;
-  if (TISOPR(expr) && TOPR(expr) == opr) {
-    if (TISSCALAR(expr->lchild) && TSCALAR(expr->lchild) == id) {
-      ast_overwrite(expr, expr->lchild, 1);
+  if (T_IS_OPR(expr) && T_OPR(expr) == opr) {
+    if (T_IS_SCALAR(expr->lchild) && T_SCALAR(expr->lchild) == id) {
+      ast_replace(expr->lchild);
       ctx_simpl->base.changed = 1;
-    } else if (TISSCALAR(expr->rchild) && TSCALAR(expr->rchild) == id) {
-      ast_overwrite(expr, expr->rchild, 1);
+    } else if (T_IS_SCALAR(expr->rchild) && T_SCALAR(expr->rchild) == id) {
+      ast_replace(expr->rchild);
       ctx_simpl->base.changed = 1;
     }
   }
@@ -106,28 +116,29 @@ struct ctx_match {
 static int patt_var_match(Var x, Ast_Node *expr) {
   switch (x) {
   case '#':
-    return TISSCALAR(expr);
+    return T_IS_SCALAR(expr);
   default:
     return 1;
   }
 }
 
-static int patt_match(Ast_Node *patt, Ast_Node *expr, Token **table_placeholder) {
-  switch (TTYPE(patt)) {
+static int patt_match(Ast_Node *patt, Ast_Node *expr,
+                      Token **table_placeholder) {
+  switch (T_TYPE(patt)) {
   case SCALAR:
-    return TSCALAR(patt) == TSCALAR(expr);
+    return T_SCALAR(patt) == T_SCALAR(expr);
     break;
   case VAR:
-    if (patt_var_match(TVAR(patt), expr)) {
-		*table_placeholder = NULL;
-		// set (key, value) to (patt_var, expr)
-		return 1;
-	} else {
-		return 0;
-	}
+    if (patt_var_match(T_VAR(patt), expr)) {
+      *table_placeholder = NULL;
+      // set (key, value) to (patt_var, expr)
+      return 1;
+    } else {
+      return 0;
+    }
     break;
   case OPR:
-    return TOPR(patt) == TOPR(expr);
+    return T_OPR(patt) == T_OPR(expr);
     break;
   }
 }

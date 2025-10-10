@@ -22,7 +22,8 @@ static void build(Ast_Node *out[], Token *oprs) {
   fp_push(node, out);
 }
 
-/* Shunting yard algorithm */
+/* Shunting yard algorithm. Returns an AST, with the root having a dummy parent
+ * of var '?' for organisational purposes. */
 static Ast_Node *shunting_yard(Token tokens[]) {
   /* Initialises operator stack and output stack. Output stack consists of nodes
    * and should be at most 2 elements always? */
@@ -73,6 +74,11 @@ static Ast_Node *shunting_yard(Token tokens[]) {
   fp_destroy(oprs);
   Ast_Node *root = fp_pop(out);
   fp_destroy(out);
+
+  Token dummy_token;
+  dummy_token.token_type = VAR;
+  dummy_token.var = '?';
+  Ast_Node *dummy = ast_join(dummy_token, root, NULL);
   return root;
 }
 Ast_Node *ast_create(char expr[]) { return shunting_yard(lexer(expr)); }

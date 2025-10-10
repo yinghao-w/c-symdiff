@@ -1,4 +1,5 @@
 #include "symbols.h"
+#include <math.h>
 
 #define DPX_KT char
 #define DPX_VT Opr
@@ -21,14 +22,24 @@ static float divi(float args[]) {
 	return args[0] / args[1];
 }
 
+static float powe(float args[]) {
+	return pow(args[0], args[1]);
+}
+static float expo(float args[]) {
+	return exp(args[0]);
+}
+
+/* @(x) is exp(x),
+ * x'y is (d/dx)(y) */
 void opr_set_init(void) {
   opr_set = op_create(1);
   op_add('+', (Opr){"+", 2, 1, add}, opr_set);
   op_add('-', (Opr){"-", 2, 1, sub}, opr_set);
   op_add('*', (Opr){"*", 2, 2, mul}, opr_set);
   op_add('/', (Opr){"/", 2, 2, divi}, opr_set);
-  op_add('^', (Opr){"^", 2, 3, NULL}, opr_set);
-  op_add('@', (Opr){"@", 1, 4, NULL}, opr_set);
+  op_add('^', (Opr){"^", 2, 3, powe}, opr_set);
+  op_add('@', (Opr){"@", 1, 4, expo}, opr_set);
+  op_add('\'', (Opr){"\'", 2, 5, NULL}, opr_set);
   op_add('(', (Opr){"(", 0, 0, NULL}, opr_set);
   op_add(')', (Opr){")", 0, 0, NULL}, opr_set);
 }
