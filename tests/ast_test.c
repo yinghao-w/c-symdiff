@@ -5,17 +5,7 @@
 #include "symbols.h"
 #include <stdio.h>
 
-#define NUM_EXPRS 3
-
 void opr_set_setup(void) { opr_set_init(); }
-
-struct test_exprs_formats {
-  char s[32];
-  Token tokens[16];
-  Ast_Node *tree;
-};
-
-struct test_exprs_formats test_exprs_all[NUM_EXPRS];
 
 void token_print(Token token) {
   switch (token.token_type) {
@@ -70,6 +60,16 @@ void token_print(Token token) {
   b.var = 'b';                                                                 \
   Token c = {.token_type = VAR};                                               \
   c.var = 'c';
+
+struct test_exprs_formats {
+  char s[32];
+  Token tokens[16];
+  Ast_Node *tree;
+};
+
+#define NUM_EXPRS 3
+
+struct test_exprs_formats test_exprs_all[NUM_EXPRS];
 
 void test_exprs_setup(void) {
   VAR_OPR_TOKENS_SETUP();
