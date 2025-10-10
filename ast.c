@@ -75,10 +75,6 @@ static Ast_Node *shunting_yard(Token tokens[]) {
   Ast_Node *root = fp_pop(out);
   fp_destroy(out);
 
-  Token dummy_token;
-  dummy_token.token_type = VAR;
-  dummy_token.var = '?';
-  Ast_Node *dummy = ast_join(dummy_token, root, NULL);
   return root;
 }
 Ast_Node *ast_create(char expr[]) { return shunting_yard(lexer(expr)); }
