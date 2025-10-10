@@ -77,7 +77,23 @@ static Ast_Node *shunting_yard(Token tokens[]) {
 
   return root;
 }
-Ast_Node *ast_create(char expr[]) { return shunting_yard(lexer(expr)); }
+
+struct Expression {
+  Ast_Node *ast_tree;
+};
+
+Ast_Node *ast_tree(Expression *expr) { return expr->ast_tree; }
+
+Expression *expr_create(char expr[]) {
+  Expression *p = malloc(sizeof(*p));
+  p->ast_tree = shunting_yard(lexer(expr));
+  return p;
+}
+
+void expr_destroy(Expression *expr) {
+	ast_destroy(ast_tree(expr));
+	free(expr);
+}
 
 static int tok_cmp(Token t1, Token t2) {
   if (t1.token_type != t2.token_type) {
@@ -97,13 +113,14 @@ static int tok_cmp(Token t1, Token t2) {
   }
 }
 
-int ast_expr_is_equal(Ast_Node *expr1, Ast_Node *expr2) {
-  return ast_is_equal(expr1, expr2, tok_cmp);
+int expr_is_equal(Expression *expr1, Expression *expr2) {
+  return ast_is_equal(ast_tree(expr1), ast_tree(expr2), tok_cmp);
 }
 
-Ast_Node *ast_copy(Ast_Node *expr) {
-  Ast_Node *copy_root = ast_leaf(expr->value);
-  Ast_Iter *it1 = ast_iter_create(expr, PRE);
+Expression *expr_copy(Expression *expr) {
+  Ast_Node *tree = ast_tree(expr);
+  Ast_Node *copy_root = ast_leaf(tree->value);
+  Ast_Iter *it1 = ast_iter_create(tree, PRE);
   Ast_Iter *it2 = ast_iter_create(copy_root, PRE);
   for (ast_start(it1), ast_start(it2), ast_traverse(it1); !ast_end(it1);
        ast_traverse(it1)) {
@@ -128,5 +145,8 @@ Ast_Node *ast_copy(Ast_Node *expr) {
   }
   free(it1);
   free(it2);
-  return copy_root;
+
+  Expression *p = malloc(sizeof(*p));
+  p->ast_tree = copy_root;
+  return p;
 }

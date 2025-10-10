@@ -9,10 +9,16 @@
 #define T_STRUCT_PREFIX Ast
 #include "tree.h"
 
-Ast_Node *ast_create(char expr[]);
+typedef struct Expression Expression;
 
-int ast_expr_is_equal(Ast_Node *expr1, Ast_Node *expr2);
+Ast_Node *ast_tree(Expression *expr);
 
-Ast_Node *ast_copy(Ast_Node *expr);
+Expression *expr_create(char expr[]);
+
+void expr_destroy(Expression *expr);
+
+int expr_is_equal(Expression *expr1, Expression *expr2);
+
+Expression *expr_copy(Expression *expr);
 
 #endif

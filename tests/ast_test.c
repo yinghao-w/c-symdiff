@@ -186,26 +186,26 @@ void test_lexer_2(void) {
   printf("%s passed\n", __func__);
 }
 
-void test_ast_expr_is_equal(void) {
-  Ast_Node *ast_s = ast_create("  @(7- 5.2)");
-  Ast_Node *ast_t = ast_create("@ ( 7 - 5.2) ");
-  assert(ast_expr_is_equal(ast_s, ast_t));
+void test_expr_is_equal(void) {
+  Expression *ast_s = expr_create("  @(7- 5.2)");
+  Expression *ast_t = expr_create("@ ( 7 - 5.2) ");
+  assert(expr_is_equal(ast_s, ast_t));
 
-  Ast_Node *ast_u = ast_create("@ (7 / 5.2)  ");
-  assert(!ast_expr_is_equal(ast_s, ast_u));
+  Expression *ast_u = expr_create("@ (7 / 5.2)  ");
+  assert(!expr_is_equal(ast_s, ast_u));
 
-  Ast_Node *ast_a = ast_create("1 + x + 3");
-  Ast_Node *ast_b = ast_create("1 + 3 + x");
-  Ast_Node *ast_c = ast_create("1 + (x + 3)");
-  assert(!ast_expr_is_equal(ast_a, ast_b));
-  assert(!ast_expr_is_equal(ast_a, ast_c));
+  Expression *ast_a = expr_create("1 + x + 3");
+  Expression *ast_b = expr_create("1 + 3 + x");
+  Expression *ast_c = expr_create("1 + (x + 3)");
+  assert(!expr_is_equal(ast_a, ast_b));
+  assert(!expr_is_equal(ast_a, ast_c));
 
-  ast_destroy(ast_s);
-  ast_destroy(ast_t);
-  ast_destroy(ast_u);
-  ast_destroy(ast_a);
-  ast_destroy(ast_b);
-  ast_destroy(ast_c);
+  expr_destroy(ast_s);
+  expr_destroy(ast_t);
+  expr_destroy(ast_u);
+  expr_destroy(ast_a);
+  expr_destroy(ast_b);
+  expr_destroy(ast_c);
   printf("%s passed\n", __func__);
 }
 
@@ -213,27 +213,28 @@ void test_shunting_yard(void) {
   for (int i = 0; i < NUM_EXPRS; i++) {
     Ast_Node *expr = shunting_yard(lexer(test_exprs_all[i].s));
     Ast_Node *expected = test_exprs_all[i].tree;
-    assert(ast_expr_is_equal(expr, expected));
+    assert(ast_is_equal(expr, expected, tok_cmp));
 	ast_destroy(expr);
   }
   printf("%s passed\n", __func__);
 }
 
-void test_ast_create(void) {
+void test_expr_create(void) {
   for (int i = 0; i < NUM_EXPRS; i++) {
-    Ast_Node *expr = ast_create(test_exprs_all[i].s);
-    Ast_Node *expected = test_exprs_all[i].tree;
-    assert(ast_expr_is_equal(expr, expected));
-	ast_destroy(expr);
+    Expression *expr = expr_create(test_exprs_all[i].s);
+	Expression expected = {test_exprs_all[i].tree};
+    assert(expr_is_equal(expr, &expected));
+	expr_destroy(expr);
   }
   printf("%s passed\n", __func__);
 }
 
-void test_ast_copy(void) {
+void test_expr_copy(void) {
   for (int i = 0; i < NUM_EXPRS; i++) {
-    Ast_Node *copy = ast_copy(test_exprs_all[i].tree);
-    assert(ast_expr_is_equal(copy, test_exprs_all[i].tree));
-	ast_destroy(copy);
+	  Expression original = {test_exprs_all[i].tree};
+    Expression *copy = expr_copy(&original);
+    assert(expr_is_equal(copy, &original));
+	expr_destroy(copy);
   }
   printf("%s passed\n", __func__);
 }
@@ -244,10 +245,10 @@ void run_tests(void) {
   test_exprs_setup();
   test_lexer_2();
   test_shunting_yard();
-  test_ast_create();
-  test_ast_expr_is_equal();
+  test_expr_create();
+  test_expr_is_equal();
   test_tok_cmp();
-  test_ast_copy();
+  test_expr_copy();
   test_exprs_teardown();
 }
 

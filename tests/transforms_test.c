@@ -6,7 +6,7 @@
 // struct test_expr {
 // 	char str[32];
 // 	int eval;
-// 	Ast_Node *simpl;
+// 	Expression *simpl;
 // };
 //
 // #define NUM_EXPRS 3
@@ -32,42 +32,42 @@
 // }
 
 void test_eval(void) {
-  Ast_Node *expr1 = ast_create("4 - 9");
-  Ast_Node *expr2 = ast_create("2 / 3.9 - 4");
-  Ast_Node *expr3 = ast_create("1.1 + 5");
+  Expression *expr1 = expr_create("4 - 9");
+  Expression *expr2 = expr_create("2 / 3.9 - 4");
+  Expression *expr3 = expr_create("1.1 + 5");
   struct ctx_base base;
 
-  eval(expr1, &base);
-  assert(expr1->value.scalar == -5);
-  assert(!expr1->lchild);
-  eval(expr2, &base);
-  assert(expr2->value.token_type == OPR);
-  eval(expr3, &base);
-  assert(expr3->value.scalar - 6.1 < 0.01);
-  assert(!expr1->rchild);
+  eval(ast_tree(expr1), &base);
+  assert(ast_tree(expr1)->value.scalar == -5);
+  assert(!ast_tree(expr1)->lchild);
+  eval(ast_tree(expr2), &base);
+  assert(ast_tree(expr2)->value.token_type == OPR);
+  eval(ast_tree(expr3), &base);
+  assert(ast_tree(expr3)->value.scalar - 6.1 < 0.01);
+  assert(!ast_tree(expr1)->rchild);
 
-  ast_destroy(expr1);
-  ast_destroy(expr2);
-  ast_destroy(expr3);
+  expr_destroy(expr1);
+  expr_destroy(expr2);
+  expr_destroy(expr3);
 
   printf("%s passed\n", __func__);
 }
 
 void test_id_apply(void) {
-  Ast_Node *expr1 = ast_create("0 + x");
-  Ast_Node *expr2 = ast_create("(5 - @ x)* 1");
-  struct ctx_simpl add_0_ctx = {{0, 0}, opr_get('+'), 0};
-  struct ctx_simpl mul_0_ctx = {{0, 0}, opr_get('*'), 1};
-  id_apply(expr1, &add_0_ctx);
-  id_apply(expr2, &mul_0_ctx);
-  Ast_Node *expected_expr1 = ast_create("x");
-  Ast_Node *expected_expr2 = ast_create("5 - @ x");
-  assert(ast_expr_is_equal(expr1, expected_expr1));
-  assert(ast_expr_is_equal(expr2, expected_expr2));
-  ast_destroy(expr1);
-  ast_destroy(expr2);
-  ast_destroy(expected_expr1);
-  ast_destroy(expected_expr2);
+  Expression *expr1 = expr_create("0 + x");
+  Expression *expr2 = expr_create("(5 - @ x)* 1");
+  struct ctx_simpl add_0_ctx = {{expr1, 0, 0}, opr_get('+'), 0};
+  struct ctx_simpl mul_0_ctx = {{expr2, 0, 0}, opr_get('*'), 1};
+  id_apply(ast_tree(expr1), &add_0_ctx);
+  id_apply(ast_tree(expr1), &mul_0_ctx);
+  Expression *expected_expr1 = expr_create("x");
+  Expression *expected_expr2 = expr_create("5 - @ x");
+  assert(expr_is_equal(expr1, expected_expr1));
+  assert(expr_is_equal(expr2, expected_expr2));
+  expr_destroy(expr1);
+  expr_destroy(expr2);
+  expr_destroy(expected_expr1);
+  expr_destroy(expected_expr2);
   printf("%s passed\n", __func__);
 }
 
