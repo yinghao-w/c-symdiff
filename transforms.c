@@ -28,18 +28,7 @@ struct CtxAll {
   void *ctx_trans;
 };
 
-static void ast_attach(Ast_Node *child, Ast_Node *parent) {
-  assert(ast_num_children(parent) < 2);
-  if (!parent->lchild) {
-    parent->lchild = child;
-  } else {
-    parent->rchild = child;
-  }
-  child->parent = parent;
-}
-
-/* Replaces a new's parent with new. The wrapping of each AST root allows
- * this to be a replacement, not a overwriting. */
+/* Replaces a new's parent with new. */
 static void ast_merge_replace(Ast_Node *new, Expression *expr) {
   assert(new->parent);
   Ast_Node *parent = new->parent;

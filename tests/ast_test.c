@@ -1,5 +1,5 @@
-#include "ast.h"
 #define T_DEBUG
+#define SYMBOLS_DEBUG
 #include "ast.c"
 #include "lexer.h"
 #include "symbols.h"

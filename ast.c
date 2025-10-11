@@ -80,6 +80,13 @@ static Ast_Node *shunting_yard(Token tokens[]) {
 Expression *expr_create(char expr[]) {
   Expression *p = malloc(sizeof(*p));
   p->ast_tree = shunting_yard(lexer(expr));
+
+  /* Give the AST root a dummy parent to simplify tree modification functions */
+  // Token token;
+  // token.token_type = VAR;
+  // token.var = '#';
+  // ast_join(token, p->ast_tree, NULL);
+
   return p;
 }
 

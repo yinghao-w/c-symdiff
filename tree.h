@@ -24,8 +24,8 @@
  *
  * 		i_destroy(root);
  *
- * 	Detach a node from its parent, setting respective parent and child
- * pointers to NULL:
+ * 	Attach or detach a node to or from its parent, setting respective parent and
+ * 	child pointers:
  *
  * 		i_detach(node);
  *
@@ -149,6 +149,16 @@ static void T_CONCAT(T_PREFIX, detach)(P_Node *node) {
     node->parent->rchild = NULL;
   }
   node->parent = NULL;
+}
+
+/* Attach node to its parent */
+static void T_CONCAT(T_PREFIX, attach)(P_Node *child, P_Node *parent) {
+  if (!parent->lchild) {
+    parent->lchild = child;
+  } else {
+    parent->rchild = child;
+  }
+  child->parent = parent;
 }
 
 /* ----------------------- *
