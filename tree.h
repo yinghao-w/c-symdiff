@@ -155,6 +155,8 @@ static void T_CONCAT(T_PREFIX, detach)(P_Node *node) {
  * ITERATOR IMPLEMENTATION *
  * ------------------------*/
 
+/* TODO: Make variables which can be const, const. */
+
 #define P_Iter T_CONCAT(T_STRUCT_PREFIX, Iter)
 
 typedef enum { LPARENT, RPARENT, LCHILD, RCHILD } CURR_DIR;
@@ -191,7 +193,7 @@ static P_Iter *T_CONCAT(T_PREFIX, iter_create)(P_Node *root, ORDER order) {
 }
 
 /* Walks the tree one adjacent node at a time, depth first and left to right. */
-static void T_CONCAT(T_PREFIX, traverse)(P_Iter *it) {
+static P_Node *T_CONCAT(T_PREFIX, traverse)(P_Iter *it) {
   if (it->tail == it->root && it->tail->parent == it->head) {
     it->tail = NULL;
   } else {
@@ -219,6 +221,15 @@ static void T_CONCAT(T_PREFIX, traverse)(P_Iter *it) {
       break;
     }
     it->dir = T_CONCAT(T_PREFIX, tail_dir)(it->tail, it->head);
+  }
+
+  switch (it->order) {
+  case PRE:
+    return it->head;
+    break;
+  case POST:
+    return it->tail;
+    break;
   }
 }
 

@@ -1,4 +1,5 @@
 #include "ast.h"
+#include "symbols.h"
 #include "transforms.c"
 #include <assert.h>
 #include <stdio.h>
@@ -31,18 +32,18 @@
 //   };
 // }
 
-void test_eval(void) {
+void test_eval_apply(void) {
   Expression *expr1 = expr_create("4 - 9");
   Expression *expr2 = expr_create("2 / 3.9 - 4");
   Expression *expr3 = expr_create("1.1 + 5");
-  struct ctx_base base;
+  struct CtxBase base;
 
-  eval(expr1->ast_tree, &base);
+  eval_apply(expr1->ast_tree, &base);
   assert(expr1->ast_tree->value.scalar == -5);
   assert(!expr1->ast_tree->lchild);
-  eval(expr2->ast_tree, &base);
+  eval_apply(expr2->ast_tree, &base);
   assert(expr2->ast_tree->value.token_type == OPR);
-  eval(expr3->ast_tree, &base);
+  eval_apply(expr3->ast_tree, &base);
   assert(expr3->ast_tree->value.scalar - 6.1 < 0.01);
   assert(!expr1->ast_tree->rchild);
 
@@ -55,20 +56,104 @@ void test_eval(void) {
 void test_id_apply(void) {
   Expression *expr1 = expr_create("0 + x");
   Expression *expr2 = expr_create("(5 - @ x)* 1");
-  struct ctx_simpl add_0_ctx = {{expr1, 0}, opr_get('+'), 0};
-  struct ctx_simpl mul_0_ctx = {{expr2, 0}, opr_get('*'), 1};
+  struct CtxSimpl add_0_ctx = {{expr1, 0}, simpl_get(0, simpls)};
+  struct CtxSimpl mul_1_ctx = {{expr2, 0}, simpl_get(1, simpls)};
+
   Expression *expected_expr1 = expr_create("x");
   Expression *expected_expr2 = expr_create("5 - @ x");
 
   id_apply(expr1->ast_tree, &add_0_ctx);
-  id_apply(expr1->ast_tree, &mul_0_ctx);
+  id_apply(expr2->ast_tree, &mul_1_ctx);
   assert(expr_is_equal(expr1, expected_expr1));
   assert(expr_is_equal(expr2, expected_expr2));
 
+  Expression *expr3 = expr_create("(x + 0) / y");
+  struct CtxSimpl add_0_ctx2 = {{expr3, 0}, simpl_get(0, simpls)};
+  Expression *expected_expr3 = expr_create("x / y");
+  id_apply(expr3->ast_tree->lchild, &add_0_ctx2);
+
+  assert(expr_is_equal(expr3, expected_expr3));
+
   expr_destroy(expr1);
   expr_destroy(expr2);
+  expr_destroy(expr3);
   expr_destroy(expected_expr1);
   expr_destroy(expected_expr2);
+  expr_destroy(expected_expr3);
+  printf("%s passed\n", __func__);
+}
+
+void test_absorp_apply(void) {
+  Expression *expr = expr_create("(3 * 0) * (2 * a - 4)");
+  struct CtxSimpl mul_0_ctx = {{expr, 0}, simpl_get(2, simpls)};
+  Expression *expected_expr1 = expr_create("0 * (2 *a - 4 )");
+  Expression *expected_expr2 = expr_create("0");
+
+  absorp_apply(expr->ast_tree->lchild, &mul_0_ctx);
+  assert(expr_is_equal(expr, expected_expr1));
+  absorp_apply(expr->ast_tree, &mul_0_ctx);
+  assert(expr_is_equal(expr, expected_expr2));
+
+  expr_destroy(expr);
+  expr_destroy(expected_expr1);
+  expr_destroy(expected_expr2);
+  printf("%s passed\n", __func__);
+}
+
+void test_var_match(void) {
+  Expression *expr = expr_create("3 ^ y");
+
+  assert(var_match('f', expr->ast_tree));
+  assert(!var_match('c', expr->ast_tree));
+  assert(var_match('c', expr->ast_tree->lchild));
+
+  expr_destroy(expr);
+  printf("%s passed\n", __func__);
+}
+
+void test_match(void) {
+  Expression *pattern = expr_create("f + 2");
+  Expression *expr = expr_create("(-5 / y) + 2");
+
+  BindMap *bindings = bind_create(1);
+  assert(match(pattern->ast_tree, expr->ast_tree, bindings));
+  assert(bind_size(bindings) == 1);
+  assert(bind_is_in('f', bindings));
+  assert(
+      ast_is_equal(bind_get('f', bindings), expr->ast_tree->lchild, tok_cmp));
+
+  expr_destroy(pattern);
+  expr_destroy(expr);
+  bind_destroy(bindings);
+  printf("%s passed\n", __func__);
+}
+
+void test_match_apply(void) {
+  Expression *expr = expr_create("x - (@ x)");
+  Expression *expected = expr_create("x + (-1 * @ x)");
+  struct CtxBase base = {expr, 0};
+  struct CtxPattern ctx_match = {base, rule_get(0, rules)};
+
+  match_apply(expr->ast_tree, &ctx_match);
+  assert(ctx_match.base.changed = 1);
+  assert(ast_is_equal(expr->ast_tree, expected->ast_tree, tok_cmp));
+  assert(ast_is_equal(expected->ast_tree, expr->ast_tree, tok_cmp));
+
+  expr_destroy(expr);
+  expr_destroy(expected);
+
+  expr = expr_create("(a/b) + 0");
+  expected = expr_create("a * b^(-1) + 0");
+  base.expr = expr;
+  ctx_match.base = base;
+  ctx_match.rule = rule_get(1,  rules);
+
+  match_apply(expr->ast_tree->lchild, &ctx_match);
+  assert(ast_is_equal(expr->ast_tree, expected->ast_tree, tok_cmp));
+
+  expr_destroy(expr);
+  expr_destroy(expected);
+
   printf("%s passed\n", __func__);
 }
 
@@ -76,8 +161,18 @@ void run_tests(void) {
   printf("\n\n%s\n\n", __FILE__);
   opr_set_init();
 
-  test_eval();
+  test_eval_apply();
+
+  simpls_init();
+
   test_id_apply();
+  test_absorp_apply();
+
+  rules_init();
+
+  test_var_match();
+  test_match();
+  test_match_apply();
 }
 
 int main(void) {
