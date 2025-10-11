@@ -82,10 +82,10 @@ Expression *expr_create(char expr[]) {
   p->ast_tree = shunting_yard(lexer(expr));
 
   /* Give the AST root a dummy parent to simplify tree modification functions */
-  // Token token;
-  // token.token_type = VAR;
-  // token.var = '#';
-  // ast_join(token, p->ast_tree, NULL);
+  Token token;
+  token.token_type = VAR;
+  token.var = '#';
+  ast_join(token, p->ast_tree, NULL);
 
   return p;
 }

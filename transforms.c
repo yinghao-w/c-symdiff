@@ -34,7 +34,7 @@ static void ast_merge_replace(Ast_Node *new, Expression *expr) {
   Ast_Node *parent = new->parent;
   ast_detach(new);
 
-  if (ast_is_root(parent)) {
+  if (ast_is_root(parent->parent)) {
     ast_destroy(parent);
     expr->ast_tree = new;
   } else {
@@ -61,7 +61,7 @@ static void ast_replace(Ast_Node *old, Ast_Node *new, Expression *expr) {
     ast_detach(new);
   }
 
-  if (ast_is_root(old)) {
+  if (ast_is_root(old->parent)) {
     expr->ast_tree = new;
     ast_destroy(old);
   } else {
@@ -337,6 +337,43 @@ int rec_apply(Expression *expr, ORDER order, void func(Ast_Node *, void *),
   ast_iter_apply(expr->ast_tree, order, func, &ctx);
   return ctx.changed;
 }
+
+int rec_apply_pre(Expression *expr, void func(Ast_Node *, void *),
+                  void *ctx_trans) {
+  struct CtxAll ctx = {expr, 0, ctx_trans};
+
+  Ast_Iter *it = ast_iter_create(expr->ast_tree, PRE);
+  for (ast_begin(it); !ast_end(it); ast_next(it)) {
+
+    Ast_Node *old_head = it->head;
+
+    func(it->head, &ctx);
+
+    switch (it->dir) {
+    case LPARENT:
+      if (it->tail->lchild != old_head) {
+        it->head = it->tail->lchild;
+      }
+      break;
+    case RPARENT:
+      if (it->tail->rchild != old_head) {
+        it->head = it->tail->rchild;
+      }
+      break;
+
+    case LCHILD:
+    case RCHILD:
+      if (it->tail->parent != old_head) {
+        // it->head = tail->parent
+        abort();
+      }
+      break;
+    }
+  }
+
+return ctx.changed;
+}
+
 #define MAX_ITERATIONS 50
 
 int diff_apply(Expression *expr) {
