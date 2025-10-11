@@ -1,7 +1,6 @@
 #include "ast.h"
 #include "../c-generics/fat_pointer.h"
 #include "lexer.h"
-#include "symbols.h"
 #include <assert.h>
 
 #define fp_peek(darray) darray[fp_length(darray) - 1]
@@ -78,12 +77,6 @@ static Ast_Node *shunting_yard(Token tokens[]) {
   return root;
 }
 
-struct Expression {
-  Ast_Node *ast_tree;
-};
-
-Ast_Node *ast_tree(Expression *expr) { return expr->ast_tree; }
-
 Expression *expr_create(char expr[]) {
   Expression *p = malloc(sizeof(*p));
   p->ast_tree = shunting_yard(lexer(expr));
@@ -91,34 +84,16 @@ Expression *expr_create(char expr[]) {
 }
 
 void expr_destroy(Expression *expr) {
-	ast_destroy(ast_tree(expr));
-	free(expr);
-}
-
-static int tok_cmp(Token t1, Token t2) {
-  if (t1.token_type != t2.token_type) {
-    return 0;
-  } else {
-    switch (t1.token_type) {
-    case SCALAR:
-      return t1.scalar - t2.scalar < 0.01;
-      break;
-    case VAR:
-      return t1.var == t2.var;
-      break;
-    case OPR:
-      return t1.opr == t2.opr;
-      break;
-    }
-  }
+  ast_destroy(expr->ast_tree);
+  free(expr);
 }
 
 int expr_is_equal(Expression *expr1, Expression *expr2) {
-  return ast_is_equal(ast_tree(expr1), ast_tree(expr2), tok_cmp);
+  return ast_is_equal(expr1->ast_tree, expr2->ast_tree, tok_cmp);
 }
 
 Expression *expr_copy(Expression *expr) {
-  Ast_Node *tree = ast_tree(expr);
+  Ast_Node *tree = expr->ast_tree;
   Ast_Node *copy_root = ast_leaf(tree->value);
   Ast_Iter *it1 = ast_iter_create(tree, PRE);
   Ast_Iter *it2 = ast_iter_create(copy_root, PRE);

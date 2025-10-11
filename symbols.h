@@ -30,4 +30,6 @@ typedef struct {
   };
 } Token;
 
+int tok_cmp(Token t1, Token t2);
+
 #endif

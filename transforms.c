@@ -15,15 +15,17 @@
 static void ast_replace(Ast_Node *new, Expression *expr) {
   assert(new->parent);
   Ast_Node *parent = new->parent;
+
   if (ast_is_root(parent)) {
-	  ast_detach(new);
-	  ast_destroy(parent);
-	  // ast_tree(expr) = new;
+    ast_detach(new);
+    ast_destroy(parent);
+	expr->ast_tree = new;
   } else {
     Ast_Node *grandparent = parent->parent;
     ast_detach(parent);
     ast_detach(new);
     ast_destroy(parent);
+
     /* Assumes that a node will never have a rchild but no lchild. Might need to
      * change below if the assumption changes. */
     if (!grandparent->lchild) {
@@ -34,19 +36,15 @@ static void ast_replace(Ast_Node *new, Expression *expr) {
   }
 }
 
-/* Caanged is the output parameter for if a transform or several transforms
- * changed the tree, order is the preferred order to iteratively apply the
- * transform to each node of the tree. Pre-order transforms propagate upwards,
- * post-order transforms propagate downwards. */
 struct ctx_base {
   Expression *expr;
   int changed;
-  ORDER order;
 };
 
-int recursive_apply(Ast_Node *node, void trans(Ast_Node *, void *), void *ctx) {
+int recursive_apply(Ast_Node *node, ORDER order, void trans(Ast_Node *, void *),
+                    void *ctx) {
   struct ctx_base *base = (struct ctx_base *)ctx;
-  ast_iter_apply(node, base->order, trans, ctx);
+  ast_iter_apply(node, order, trans, ctx);
   return base->changed;
 }
 
@@ -86,6 +84,7 @@ void id_apply(Ast_Node *node, void *ctx) {
   Scalar id = ctx_simpl->x;
   Expression *expr = ctx_simpl->base.expr;
   ctx_simpl->base.changed = 0;
+
   if (T_IS_OPR(node) && T_OPR(node) == opr) {
     if (T_IS_SCALAR(node->lchild) && T_SCALAR(node->lchild) == id) {
       ast_replace(node->rchild, expr);
@@ -103,6 +102,7 @@ void absorpt_apply(Ast_Node *node, void *ctx) {
   Scalar id = ctx_simpl->x;
   Expression *expr = ctx_simpl->base.expr;
   ctx_simpl->base.changed = 0;
+
   if (T_IS_OPR(node) && T_OPR(node) == opr) {
     if (T_IS_SCALAR(node->lchild) && T_SCALAR(node->lchild) == id) {
       ast_replace(node->lchild, expr);

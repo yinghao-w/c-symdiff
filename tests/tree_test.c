@@ -25,24 +25,28 @@ void tree_print(I_Node *root) { i_DEBUG_PRINT(root, &int_print); }
 
 void iter_print(I_Iter *it) {
   printf("Iterator: \n");
-  printf("R:  ");
+  printf("root:  ");
   int_print(it->root->value);
+
   if (it->tail && it->head) {
-    printf("C:  ");
+    printf("tail:  ");
     int_print(it->tail->value);
-    printf("N:  ");
+    printf("head:  ");
     int_print(it->head->value);
   }
-  printf("\nD:  %d", it->dir);
+
+  printf("\ndir:  %d", it->dir);
   printf("\n");
 }
 
 void test_leaf(void) {
   I_Node *node = i_leaf(12);
+
   ASSERT_STRUCT(node->value == 12, node, tree_print);
   ASSERT_STRUCT(!node->parent, node, tree_print);
   ASSERT_STRUCT(!node->lchild, node, tree_print);
   ASSERT_STRUCT(!node->lchild, node, tree_print);
+
   free(node);
   printf("%s passed\n", __func__);
 }
@@ -50,6 +54,7 @@ void test_join(void) {
   I_Node *node1 = i_leaf(21);
   I_Node *node2 = i_leaf(-8);
   I_Node *node3 = i_join(0, node1, node2);
+
   ASSERT_STRUCT(node3->value == 0, node3, tree_print);
   ASSERT_STRUCT(!node3->parent, node3, tree_print);
   ASSERT_STRUCT(node3->lchild == node1, node3, tree_print);
@@ -60,6 +65,7 @@ void test_join(void) {
   I_Node *node4 = i_join(-5, node3, NULL);
   ASSERT_STRUCT(node4->lchild == node3, node4, tree_print);
   ASSERT_STRUCT(!node4->rchild, node4, tree_print);
+
   free(node1);
   free(node2);
   free(node3);
@@ -87,9 +93,11 @@ void test_join(void) {
 
 void test_height(void) {
   TEST_TREE_SETUP();
+
   ASSERT_STRUCT(i_height(node7) == 3, node7, tree_print);
   I_Node *test_leaf = i_leaf(19);
   ASSERT_STRUCT(i_height(test_leaf) == 0, test_leaf, tree_print);
+
   free(test_leaf);
   TEST_TREE_TEARDOWN();
   printf("%s passed\n", __func__);
@@ -97,50 +105,61 @@ void test_height(void) {
 
 void test_is_leaf(void) {
   TEST_TREE_SETUP();
+
   ASSERT_STRUCT(!i_is_leaf(node7), node7, tree_print);
   ASSERT_STRUCT(i_is_leaf(node1), node1, tree_print);
   ASSERT_STRUCT(!i_is_leaf(node6), node6, tree_print);
+
   TEST_TREE_TEARDOWN();
   printf("%s passed\n", __func__);
 }
 
 void test_is_root(void) {
   TEST_TREE_SETUP();
+
   ASSERT_STRUCT(i_is_root(node7), node7, tree_print);
   ASSERT_STRUCT(!i_is_root(node4), node4, tree_print);
+
   TEST_TREE_TEARDOWN();
   printf("%s passed\n", __func__);
 }
 
 void test_num_children(void) {
   TEST_TREE_SETUP();
+
   ASSERT_STRUCT(i_num_children(node7) == 2, node7, tree_print);
   ASSERT_STRUCT(i_num_children(node5) == 0, node5, tree_print);
   ASSERT_STRUCT(i_num_children(node3) == 1, node5, tree_print);
+
   TEST_TREE_TEARDOWN();
   printf("%s passed\n", __func__);
 }
 
 void test_detach(void) {
   TEST_TREE_SETUP();
+
   i_detach(node4);
   ASSERT_STRUCT(!node4->parent, node4, tree_print);
   ASSERT_STRUCT(!node7->lchild, node7, tree_print);
+
   TEST_TREE_TEARDOWN();
   printf("%s passed\n", __func__);
 }
 
-void test_iter_create() {
+void test_iter_create(void) {
   TEST_TREE_SETUP();
+
   I_Iter *it = i_iter_create(node7, POST);
   ASSERT_STRUCT(it->root == node7, it, iter_print);
+
   free(it);
   TEST_TREE_TEARDOWN();
   printf("%s passed\n", __func__);
 }
 
-void test_begin() {
+void test_begin(void) {
   TEST_TREE_SETUP();
+
   I_Iter *it = i_iter_create(node7, POST);
   I_Node *first = i_begin(it);
   ASSERT_STRUCT(first == node1, it, iter_print);
@@ -163,8 +182,9 @@ void test_begin() {
   printf("%s passed\n", __func__);
 }
 
-void test_next() {
+void test_next(void) {
   TEST_TREE_SETUP();
+
   I_Iter *it = i_iter_create(node7, POST);
   i_begin(it);
   ASSERT_STRUCT(i_next(it) == node2, it, iter_print);
@@ -193,8 +213,9 @@ void test_next() {
   printf("%s passed\n", __func__);
 }
 
-void test_iter() {
+void test_iter(void) {
   TEST_TREE_SETUP();
+
   I_Iter *it = i_iter_create(node7, POST);
   I_Node *node;
   int i;
@@ -202,6 +223,7 @@ void test_iter() {
     ASSERT_STRUCT(node->value == i, it, iter_print);
   }
   free(it);
+
   it = i_iter_create(node5, POST);
   for (node = i_begin(it), i = 5; !i_end(it); node = i_next(it), i++) {
     ASSERT_STRUCT(node->value == 5, it, iter_print);
@@ -230,27 +252,32 @@ void node_value_get(I_Node *node, void *a) {
   arr[node->value - 1] = node->value;
 }
 
-void test_iter_apply() {
+void test_iter_apply(void) {
   TEST_TREE_SETUP();
+
   int arr[7];
   i_iter_apply(node7, POST, node_value_get, arr);
   for (int i = 0; i < 7; i++) {
     assert(arr[i] == i + 1);
   }
+
   TEST_TREE_TEARDOWN();
   printf("%s passed\n", __func__);
 }
 
-void test_destroy() {
+void test_destroy(void) {
   TEST_TREE_SETUP();
+
   i_destroy(node7);
+
   printf("%s check for memory leaks with valgrind\n", __func__);
 }
 
 int int_is_equal(int n, int m) { return n == m; }
 
-void test_is_equal() {
+void test_is_equal(void) {
   TEST_TREE_SETUP();
+
   I_Node *tree1 = i_leaf(1);
   I_Node *tree2 = i_leaf(2);
   ASSERT_STRUCT(i_is_equal(tree1, tree1, int_is_equal), tree1, tree_print);
@@ -258,6 +285,7 @@ void test_is_equal() {
   I_Node *tree3 = i_join(3, tree2, NULL);
   ASSERT_STRUCT(i_is_equal(tree3, node3, int_is_equal), tree3, tree_print);
   ASSERT_STRUCT(i_is_equal(node3, tree3, int_is_equal), node3, tree_print);
+
   free(tree1);
   free(tree2);
   free(tree3);
@@ -265,8 +293,9 @@ void test_is_equal() {
   printf("%s passed\n", __func__);
 }
 
-void test_begin_pre() {
+void test_begin_pre(void) {
   TEST_TREE_SETUP();
+
   I_Iter *it = i_iter_create(node7, PRE);
   I_Node *first = i_begin(it);
   ASSERT_STRUCT(first == node7, it, iter_print);
@@ -286,11 +315,12 @@ void test_begin_pre() {
   printf("%s passed\n", __func__);
 }
 
-void test_next_pre() {
+void test_next_pre(void) {
   TEST_TREE_SETUP();
-  I_Iter *it = i_iter_create(node7, PRE);
 
+  I_Iter *it = i_iter_create(node7, PRE);
   i_begin(it);
+
   ASSERT_STRUCT(i_next(it) == node4, it, iter_print);
   ASSERT_STRUCT(i_next(it) == node1, it, iter_print);
   ASSERT_STRUCT(i_next(it) == node3, it, iter_print);
@@ -304,16 +334,19 @@ void test_next_pre() {
   printf("%s passed\n", __func__);
 }
 
-void test_iter_pre() {
+void test_iter_pre(void) {
   TEST_TREE_SETUP();
+
   I_Iter *it = i_iter_create(node7, PRE);
   I_Node *node;
   int a[] = {7, 4, 1, 3, 2, 6, 5};
   int i;
+
   for (node = i_begin(it), i = 0; !i_end(it); node = i_next(it), i++) {
     ASSERT_STRUCT(node->value == a[i], it, iter_print);
   }
   free(it);
+
   it = i_iter_create(node5, PRE);
   for (node = i_begin(it), i = 5; !i_end(it); node = i_next(it), i++) {
     ASSERT_STRUCT(node->value == 5, it, iter_print);

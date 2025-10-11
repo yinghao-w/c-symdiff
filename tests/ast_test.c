@@ -45,8 +45,6 @@ void token_print(Token token) {
   mul.opr = opr_get('*');                                                      \
   Token divi = {.token_type = OPR};                                            \
   divi.opr = opr_get('/');                                                     \
-  Token pow = {.token_type = OPR};                                             \
-  pow.opr = opr_get('^');                                                      \
   Token exp = {.token_type = OPR};                                             \
   exp.opr = opr_get('@');                                                      \
   Token lp = {.token_type = OPR};                                              \
@@ -73,6 +71,7 @@ struct test_exprs_formats test_exprs_all[NUM_EXPRS];
 
 void test_exprs_setup(void) {
   VAR_OPR_TOKENS_SETUP();
+  
   test_exprs_all[0] = (struct test_exprs_formats){
       "3 *(x + 2)",
       {
@@ -183,6 +182,7 @@ void test_lexer_2(void) {
     }
 	fp_destroy(tokens);
   }
+
   printf("%s passed\n", __func__);
 }
 
@@ -197,6 +197,7 @@ void test_expr_is_equal(void) {
   Expression *ast_a = expr_create("1 + x + 3");
   Expression *ast_b = expr_create("1 + 3 + x");
   Expression *ast_c = expr_create("1 + (x + 3)");
+
   assert(!expr_is_equal(ast_a, ast_b));
   assert(!expr_is_equal(ast_a, ast_c));
 
@@ -216,6 +217,7 @@ void test_shunting_yard(void) {
     assert(ast_is_equal(expr, expected, tok_cmp));
 	ast_destroy(expr);
   }
+
   printf("%s passed\n", __func__);
 }
 
@@ -226,6 +228,7 @@ void test_expr_create(void) {
     assert(expr_is_equal(expr, &expected));
 	expr_destroy(expr);
   }
+
   printf("%s passed\n", __func__);
 }
 
@@ -236,6 +239,7 @@ void test_expr_copy(void) {
     assert(expr_is_equal(copy, &original));
 	expr_destroy(copy);
   }
+
   printf("%s passed\n", __func__);
 }
 
@@ -243,12 +247,14 @@ void run_tests(void) {
   printf("\n\n%s\n\n", __FILE__);
   opr_set_setup();
   test_exprs_setup();
+
   test_lexer_2();
   test_shunting_yard();
   test_expr_create();
   test_expr_is_equal();
   test_tok_cmp();
   test_expr_copy();
+
   test_exprs_teardown();
 }
 

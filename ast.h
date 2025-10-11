@@ -9,9 +9,10 @@
 #define T_STRUCT_PREFIX Ast
 #include "tree.h"
 
-typedef struct Expression Expression;
+typedef struct {
+  Ast_Node *ast_tree;
+} Expression;
 
-Ast_Node *ast_tree(Expression *expr);
 
 Expression *expr_create(char expr[]);
 
