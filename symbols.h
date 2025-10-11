@@ -32,4 +32,8 @@ typedef struct {
 
 int tok_cmp(Token t1, Token t2);
 
+#ifdef SYMBOLS_DEBUG
+void token_print(Token token);
+#endif
+
 #endif

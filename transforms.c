@@ -332,8 +332,8 @@ void diff_rules_init(void) {
 
   fp_push(rule_make("constant rule' = 0", "x'c", "0"), diff_rules);
   fp_push(rule_make("self rule' = 1", "x'x", "1"), diff_rules);
-  fp_push(rule_make("sum rule", "x'(f + g)'", "x'f + x'g"), diff_rules);
-  fp_push(rule_make("product rule", "x'(f * g)'", "(x'f * g) + (f * x'g)"),
+  fp_push(rule_make("sum rule", "x'(f + g)", "x'f + x'g"), diff_rules);
+  fp_push(rule_make("product rule", "x'(f * g)", "(x'f * g) + (f * x'g)"),
           diff_rules);
   fp_push(rule_make("exp rule", "x'(@ f)", "@ f * x'f"), diff_rules);
 }
@@ -348,7 +348,6 @@ int rec_apply(Expression *expr, ORDER order, void func(Ast_Node *, void *),
   ast_iter_apply(expr->ast_tree, order, func, &ctx);
   return ctx.changed;
 }
-
 #define MAX_ITERATIONS 50
 
 int diff_apply(Expression *expr) {

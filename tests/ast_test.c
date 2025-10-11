@@ -7,20 +7,6 @@
 
 void opr_set_setup(void) { opr_set_init(); }
 
-void token_print(Token token) {
-  switch (token.token_type) {
-  case SCALAR:
-    printf("%.f", token.scalar);
-    break;
-  case VAR:
-    printf("%c", token.var);
-    break;
-  case OPR:
-    printf("%c", token.opr->repr[0]);
-    break;
-  }
-}
-
 #define ASSERT_TOKEN_EQUAL(token1, token2)                                     \
   do {                                                                         \
     if (!tok_cmp(token1, token2)) {                                            \

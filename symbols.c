@@ -1,5 +1,6 @@
 #include "symbols.h"
 #include <math.h>
+#include <stdio.h>
 
 #define DPX_KT char
 #define DPX_VT Opr
@@ -59,5 +60,19 @@ int tok_cmp(Token t1, Token t2) {
       return t1.opr == t2.opr;
       break;
     }
+  }
+}
+
+void token_print(Token token) {
+  switch (token.token_type) {
+  case SCALAR:
+    printf("%.f", token.scalar);
+    break;
+  case VAR:
+    printf("%c", token.var);
+    break;
+  case OPR:
+    printf("%c", token.opr->repr[0]);
+    break;
   }
 }
