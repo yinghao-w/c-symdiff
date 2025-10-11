@@ -21,8 +21,7 @@ static void build(Ast_Node *out[], Token *oprs) {
   fp_push(node, out);
 }
 
-/* Shunting yard algorithm. Returns an AST, with the root having a dummy parent
- * of var '?' for organisational purposes. */
+/* Shunting yard algorithm */
 static Ast_Node *shunting_yard(Token tokens[]) {
   /* Initialises operator stack and output stack. Output stack consists of nodes
    * and should be at most 2 elements always? */
@@ -79,28 +78,37 @@ static Ast_Node *shunting_yard(Token tokens[]) {
 
 Expression *expr_create(char expr[]) {
   Expression *p = malloc(sizeof(*p));
-  p->ast_tree = shunting_yard(lexer(expr));
+  Ast_Node *ast_tree = shunting_yard(lexer(expr));
 
   /* Give the AST root a dummy parent to simplify tree modification functions */
   Token token;
   token.token_type = VAR;
   token.var = '#';
-  ast_join(token, p->ast_tree, NULL);
-
+  p->dummy_parent = ast_join(token, ast_tree, NULL);
+  
   return p;
 }
 
 void expr_destroy(Expression *expr) {
-  ast_destroy(expr->ast_tree);
+  ast_destroy(expr->dummy_parent);
   free(expr);
 }
 
+Ast_Node *get_root(Expression *expr) {
+	return expr->dummy_parent->lchild;
+}
+void set_root(Ast_Node *root, Expression *expr) {
+	ast_detach(expr->dummy_parent->lchild);
+	ast_attach(root, expr->dummy_parent);
+
+}
+
 int expr_is_equal(Expression *expr1, Expression *expr2) {
-  return ast_is_equal(expr1->ast_tree, expr2->ast_tree, tok_cmp);
+  return ast_is_equal(expr1->dummy_parent, expr2->dummy_parent, tok_cmp);
 }
 
 Expression *expr_copy(Expression *expr) {
-  Ast_Node *tree = expr->ast_tree;
+  Ast_Node *tree = expr->dummy_parent;
   Ast_Node *copy_root = ast_leaf(tree->value);
   Ast_Iter *it1 = ast_iter_create(tree, PRE);
   Ast_Iter *it2 = ast_iter_create(copy_root, PRE);
@@ -129,6 +137,6 @@ Expression *expr_copy(Expression *expr) {
   free(it2);
 
   Expression *p = malloc(sizeof(*p));
-  p->ast_tree = copy_root;
+  p->dummy_parent = copy_root;
   return p;
 }

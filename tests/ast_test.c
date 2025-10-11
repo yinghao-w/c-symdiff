@@ -43,7 +43,10 @@ void opr_set_setup(void) { opr_set_init(); }
   Token b = {.token_type = VAR};                                               \
   b.var = 'b';                                                                 \
   Token c = {.token_type = VAR};                                               \
-  c.var = 'c';
+  c.var = 'c';                                                                 \
+                                                                               \
+  Token dummy = {.token_type = VAR};                                           \
+  dummy.var = '#';
 
 struct test_exprs_formats {
   char s[32];
@@ -57,7 +60,7 @@ struct test_exprs_formats test_exprs_all[NUM_EXPRS];
 
 void test_exprs_setup(void) {
   VAR_OPR_TOKENS_SETUP();
-  
+
   test_exprs_all[0] = (struct test_exprs_formats){
       "3 *(x + 2)",
       {
@@ -69,7 +72,7 @@ void test_exprs_setup(void) {
           (Token){SCALAR, {2.0}},
           rp,
       },
-      ast_join(mul,
+      ast_join(dummy, ast_join(mul,
 
                ast_leaf((Token){SCALAR, {3.0}}),
 
@@ -81,7 +84,7 @@ void test_exprs_setup(void) {
 
                             )
 
-                   )
+                   ), NULL)
 
   };
 
@@ -99,7 +102,7 @@ void test_exprs_setup(void) {
                                       rp,
                                       rp,
                                   },
-                                  ast_join(divi,
+                          ast_join(dummy,        ast_join(divi,
 
                                            ast_leaf((Token){SCALAR, {1.5}}),
 
@@ -117,7 +120,7 @@ void test_exprs_setup(void) {
 
                                                         )
 
-                                               )
+                                               ), NULL)
 
       };
 
@@ -131,7 +134,7 @@ void test_exprs_setup(void) {
           mul,
           x,
       },
-      ast_join(sub,
+ast_join(dummy,      ast_join(sub,
 
                ast_join(exp,
 
@@ -145,15 +148,15 @@ void test_exprs_setup(void) {
 
                             )
 
-                   )
+                   ), NULL)
 
   };
 }
 
 void test_exprs_teardown(void) {
-	for (int i = 0; i < NUM_EXPRS; i++) {
-		ast_destroy(test_exprs_all[i].tree);
-	}
+  for (int i = 0; i < NUM_EXPRS; i++) {
+    ast_destroy(test_exprs_all[i].tree);
+  }
 }
 
 void test_build(void) { ; }
@@ -166,7 +169,7 @@ void test_lexer_2(void) {
     for (int j = 0; j < fp_length(tokens); j++) {
       ASSERT_TOKEN_EQUAL(tokens[j], test_exprs_all[0].tokens[j]);
     }
-	fp_destroy(tokens);
+    fp_destroy(tokens);
   }
 
   printf("%s passed\n", __func__);
@@ -199,9 +202,9 @@ void test_expr_is_equal(void) {
 void test_shunting_yard(void) {
   for (int i = 0; i < NUM_EXPRS; i++) {
     Ast_Node *expr = shunting_yard(lexer(test_exprs_all[i].s));
-    Ast_Node *expected = test_exprs_all[i].tree;
+    Ast_Node *expected = test_exprs_all[i].tree->lchild;
     assert(ast_is_equal(expr, expected, tok_cmp));
-	ast_destroy(expr);
+    ast_destroy(expr);
   }
 
   printf("%s passed\n", __func__);
@@ -210,9 +213,9 @@ void test_shunting_yard(void) {
 void test_expr_create(void) {
   for (int i = 0; i < NUM_EXPRS; i++) {
     Expression *expr = expr_create(test_exprs_all[i].s);
-	Expression expected = {test_exprs_all[i].tree};
+    Expression expected = {NULL, test_exprs_all[i].tree};
     assert(expr_is_equal(expr, &expected));
-	expr_destroy(expr);
+    expr_destroy(expr);
   }
 
   printf("%s passed\n", __func__);
@@ -220,10 +223,10 @@ void test_expr_create(void) {
 
 void test_expr_copy(void) {
   for (int i = 0; i < NUM_EXPRS; i++) {
-	  Expression original = {test_exprs_all[i].tree};
+    Expression original = {NULL, test_exprs_all[i].tree};
     Expression *copy = expr_copy(&original);
     assert(expr_is_equal(copy, &original));
-	expr_destroy(copy);
+    expr_destroy(copy);
   }
 
   printf("%s passed\n", __func__);
