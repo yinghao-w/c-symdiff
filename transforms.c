@@ -23,53 +23,33 @@
  * ---------------------------------------- */
 
 struct CtxAll {
-  Expression *expr;
   int changed;
   void *ctx_trans;
 };
 
 /* Replaces a new's parent with new. */
-static void ast_merge_replace(Ast_Node *new, Expression *expr) {
-  assert(new->parent);
+static void ast_merge_replace(Ast_Node *new) {
+  assert(new->parent->parent);
   Ast_Node *parent = new->parent;
+  Ast_Node *grandparent = parent->parent;
+
   ast_detach(new);
+  ast_detach(parent);
+  ast_attach(new, grandparent);
 
-  if (ast_is_root(parent->parent)) {
-    ast_destroy(parent);
-    expr->ast_tree = new;
-  } else {
-    Ast_Node *grandparent = parent->parent;
-    ast_detach(parent);
-    ast_destroy(parent);
-
-    /* Assumes that a node will never have a rchild but no lchild. Might need to
-     * change below if the assumption changes. */
-    if (!grandparent->lchild) {
-      grandparent->lchild = new;
-    } else {
-      grandparent->rchild = new;
-    }
-    /* TODO: add a attach function to tree.h */
-    new->parent = grandparent;
-  }
+  ast_destroy(parent);
 }
 
 /* Replaces a node with another. Assumes the two nodes were not connected
  * beforehand. */
-static void ast_replace(Ast_Node *old, Ast_Node *new, Expression *expr) {
-  if (new->parent) {
-    ast_detach(new);
-  }
+static void ast_replace(Ast_Node *old, Ast_Node *new) {
+  Ast_Node *parent = old->parent;
 
-  if (ast_is_root(old->parent)) {
-    expr->ast_tree = new;
-    ast_destroy(old);
-  } else {
-    Ast_Node *parent = old->parent;
-    ast_detach(old);
-    ast_destroy(old);
-    ast_attach(new, parent);
-  }
+  ast_detach(new);
+  ast_detach(old);
+  ast_attach(new, parent);
+
+  ast_destroy(old);
 }
 
 void eval_apply(Ast_Node *node, void *ctx) {
@@ -106,16 +86,15 @@ struct Simpl {
 void id_apply(Ast_Node *node, void *ctx) {
   struct CtxAll *ctx_all = ctx;
   struct Simpl *simpl = ctx_all->ctx_trans;
-  Expression *expr = ctx_all->expr;
   Opr *opr = simpl->opr;
   Scalar id = simpl->x;
 
   if (T_IS_OPR(node) && T_OPR(node) == opr) {
     if (T_IS_SCALAR(node->lchild) && T_SCALAR(node->lchild) == id) {
-      ast_merge_replace(node->rchild, expr);
+      ast_merge_replace(node->rchild);
       ctx_all->changed = 1;
     } else if (T_IS_SCALAR(node->rchild) && T_SCALAR(node->rchild) == id) {
-      ast_merge_replace(node->lchild, expr);
+      ast_merge_replace(node->lchild);
       ctx_all->changed = 1;
     }
   }
@@ -124,16 +103,15 @@ void id_apply(Ast_Node *node, void *ctx) {
 void absorp_apply(Ast_Node *node, void *ctx) {
   struct CtxAll *ctx_all = ctx;
   struct Simpl *simpl = ctx_all->ctx_trans;
-  Expression *expr = ctx_all->expr;
   Opr *opr = simpl->opr;
   Scalar ann = simpl->x;
 
   if (T_IS_OPR(node) && T_OPR(node) == opr) {
     if (T_IS_SCALAR(node->lchild) && T_SCALAR(node->lchild) == ann) {
-      ast_merge_replace(node->lchild, expr);
+      ast_merge_replace(node->lchild);
       ctx_all->changed = 1;
     } else if (T_IS_SCALAR(node->rchild) && T_SCALAR(node->rchild) == ann) {
-      ast_merge_replace(node->rchild, expr);
+      ast_merge_replace(node->rchild);
       ctx_all->changed = 1;
     }
   }
@@ -145,8 +123,8 @@ void absorp_apply(Ast_Node *node, void *ctx) {
 
 struct PatternRule {
   char name[NAME_LENGTH];
-  Expression *pattern;
-  Expression *replacement;
+  Expression pattern;
+  Expression replacement;
 };
 
 /* Instantiate a associative array to store variable-node bindings. */
@@ -250,27 +228,25 @@ loop_exit:
 void match_apply(Ast_Node *node, void *ctx) {
   struct CtxAll *ctx_all = ctx;
   struct PatternRule *rule = ctx_all->ctx_trans;
-  Expression *expr = ctx_all->expr;
-  Ast_Node *pattern = rule->pattern->ast_tree;
+  Ast_Node *pattern = get_root(rule->pattern);
 
   BindMap *bindings = bind_create(1);
 
   if (match(pattern, node, bindings)) {
 
-    Ast_Node *replacement = rule->replacement->ast_tree;
-    for (int i = 0; i < bind_size(bindings); i++) {
-      ast_detach(bindings->data[i].value);
-    }
+    Ast_Node *replacement = get_root(rule->replacement);
 
     Ast_Iter *it = ast_iter_create(replacement, POST);
     for (Ast_Node *repl_node = ast_begin(it); !ast_end(it);
          repl_node = ast_next(it)) {
       if (T_IS_VAR(repl_node) && bind_is_in(T_VAR(repl_node), bindings)) {
         Ast_Node *bound_node = bind_get(T_VAR(repl_node), bindings);
-        ast_replace(repl_node, bound_node, expr);
+
+        /* ast_replace automatically detaches repl_node from its parent */
+        ast_replace(repl_node, bound_node);
       }
     }
-    ast_replace(node, replacement, expr);
+    ast_replace(node, replacement);
     ctx_all->changed = 1;
   }
   bind_destroy(bindings);
@@ -331,24 +307,22 @@ void diff_rules_init(void) {
  * RECURSIVE APPLICATION *
  * --------------------- */
 
-int rec_apply(Expression *expr, ORDER order, void func(Ast_Node *, void *),
-              void *ctx_trans) {
-  struct CtxAll ctx = {expr, 0, ctx_trans};
-  ast_iter_apply(expr->ast_tree, order, func, &ctx);
-  return ctx.changed;
-}
-
-int rec_apply_pre(Expression *expr, void func(Ast_Node *, void *),
+/* Apply the transform with func and ctx_trans iteratively on each subnode of
+ * the AST. */
+int rec_apply_pre(Expression expr, void func(Ast_Node *, void *),
                   void *ctx_trans) {
-  struct CtxAll ctx = {expr, 0, ctx_trans};
+  struct CtxAll ctx = {0, ctx_trans};
 
-  Ast_Iter *it = ast_iter_create(expr->ast_tree, PRE);
+  Ast_Iter *it = ast_iter_create(get_root(expr), PRE);
   for (ast_begin(it); !ast_end(it); ast_next(it)) {
 
     Ast_Node *old_head = it->head;
 
     func(it->head, &ctx);
 
+    /* Since the tree mutations are all detachments and attachments, not
+     * overwriting nodes, we need to update the iterator after each application
+     * of the transform. */
     switch (it->dir) {
     case LPARENT:
       if (it->tail->lchild != old_head) {
@@ -371,12 +345,12 @@ int rec_apply_pre(Expression *expr, void func(Ast_Node *, void *),
     }
   }
 
-return ctx.changed;
+  return ctx.changed;
 }
 
 #define MAX_ITERATIONS 50
 
-int diff_apply(Expression *expr) {
+int diff_apply(Expression expr) {
   int changed = 0;
 
   int j = 0;
@@ -384,7 +358,7 @@ int diff_apply(Expression *expr) {
     int curr_changed = 0;
     for (int i = 0; i < fp_length(diff_rules); i++) {
       curr_changed =
-          rec_apply(expr, PRE, match_apply, diff_rules + i) || curr_changed;
+          rec_apply_pre(expr, match_apply, diff_rules + i) || curr_changed;
       changed = curr_changed || changed;
     }
     if (!curr_changed) {

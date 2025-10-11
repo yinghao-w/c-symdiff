@@ -6,17 +6,17 @@
 #include <stdio.h>
 
 int main(void) {
-	opr_set_init();
-	simpls_init();
-	rules_init();
-	diff_rules_init();
+  opr_set_init();
+  simpls_init();
+  rules_init();
+  diff_rules_init();
 
-	Expression *expr = expr_create("x'3 + 4");
-	ast_DEBUG_PRINT(expr->ast_tree, token_print);
-	printf("\n");
-	diff_apply(expr);
-	ast_DEBUG_PRINT(expr->ast_tree, token_print);
+  Expression expr = expr_create("x'3 + 4");
+  ast_DEBUG_PRINT(get_root(expr), token_print);
+  printf("\n");
+  diff_apply(expr);
+  ast_DEBUG_PRINT(get_root(expr), token_print);
 
-	printf("asdjijasdkjdas\n");
-	return 0;
+  printf("asdjijasdkjdas\n");
+  return 0;
 }

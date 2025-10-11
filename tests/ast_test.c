@@ -176,16 +176,16 @@ void test_lexer_2(void) {
 }
 
 void test_expr_is_equal(void) {
-  Expression *ast_s = expr_create("  @(7- 5.2)");
-  Expression *ast_t = expr_create("@ ( 7 - 5.2) ");
+  Expression ast_s = expr_create("  @(7- 5.2)");
+  Expression ast_t = expr_create("@ ( 7 - 5.2) ");
   assert(expr_is_equal(ast_s, ast_t));
 
-  Expression *ast_u = expr_create("@ (7 / 5.2)  ");
+  Expression ast_u = expr_create("@ (7 / 5.2)  ");
   assert(!expr_is_equal(ast_s, ast_u));
 
-  Expression *ast_a = expr_create("1 + x + 3");
-  Expression *ast_b = expr_create("1 + 3 + x");
-  Expression *ast_c = expr_create("1 + (x + 3)");
+  Expression ast_a = expr_create("1 + x + 3");
+  Expression ast_b = expr_create("1 + 3 + x");
+  Expression ast_c = expr_create("1 + (x + 3)");
 
   assert(!expr_is_equal(ast_a, ast_b));
   assert(!expr_is_equal(ast_a, ast_c));
@@ -212,9 +212,9 @@ void test_shunting_yard(void) {
 
 void test_expr_create(void) {
   for (int i = 0; i < NUM_EXPRS; i++) {
-    Expression *expr = expr_create(test_exprs_all[i].s);
-    Expression expected = {NULL, test_exprs_all[i].tree};
-    assert(expr_is_equal(expr, &expected));
+    Expression expr = expr_create(test_exprs_all[i].s);
+    Expression expected = {test_exprs_all[i].tree};
+    assert(expr_is_equal(expr, expected));
     expr_destroy(expr);
   }
 
@@ -223,9 +223,9 @@ void test_expr_create(void) {
 
 void test_expr_copy(void) {
   for (int i = 0; i < NUM_EXPRS; i++) {
-    Expression original = {NULL, test_exprs_all[i].tree};
-    Expression *copy = expr_copy(&original);
-    assert(expr_is_equal(copy, &original));
+    Expression original = {test_exprs_all[i].tree};
+    Expression copy = expr_copy(original);
+    assert(expr_is_equal(copy, original));
     expr_destroy(copy);
   }
 

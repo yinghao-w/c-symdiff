@@ -9,18 +9,17 @@
 #define T_STRUCT_PREFIX Ast
 #include "tree.h"
 
-typedef struct {
-  Ast_Node *ast_tree;
+typedef struct Expression Expression;
+struct Expression {
   Ast_Node *dummy_parent;
-} Expression;
+};
 
-Ast_Node *get_root(Expression *expr);
-void set_root(Ast_Node *root, Expression *expr);
+Ast_Node *get_root(Expression expr);
+void set_root(Ast_Node *root, Expression expr);
 
-
-Expression *expr_create(char expr[]);
-void expr_destroy(Expression *expr);
-int expr_is_equal(Expression *expr1, Expression *expr2);
-Expression *expr_copy(Expression *expr);
+Expression expr_create(char expr[]);
+void expr_destroy(Expression expr);
+int expr_is_equal(Expression expr1, Expression expr2);
+Expression expr_copy(Expression expr);
 
 #endif

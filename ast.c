@@ -76,7 +76,7 @@ static Ast_Node *shunting_yard(Token tokens[]) {
   return root;
 }
 
-Expression *expr_create(char expr[]) {
+Expression expr_create(char expr[]) {
   Expression *p = malloc(sizeof(*p));
   Ast_Node *ast_tree = shunting_yard(lexer(expr));
 
@@ -85,30 +85,24 @@ Expression *expr_create(char expr[]) {
   token.token_type = VAR;
   token.var = '#';
   p->dummy_parent = ast_join(token, ast_tree, NULL);
-  
-  return p;
+
+  return *p;
 }
 
-void expr_destroy(Expression *expr) {
-  ast_destroy(expr->dummy_parent);
-  free(expr);
+void expr_destroy(Expression expr) { ast_destroy(expr.dummy_parent); }
+
+Ast_Node *get_root(Expression expr) { return expr.dummy_parent->lchild; }
+void set_root(Ast_Node *root, Expression expr) {
+  ast_detach(expr.dummy_parent->lchild);
+  ast_attach(root, expr.dummy_parent);
 }
 
-Ast_Node *get_root(Expression *expr) {
-	return expr->dummy_parent->lchild;
-}
-void set_root(Ast_Node *root, Expression *expr) {
-	ast_detach(expr->dummy_parent->lchild);
-	ast_attach(root, expr->dummy_parent);
-
+int expr_is_equal(Expression expr1, Expression expr2) {
+  return ast_is_equal(expr1.dummy_parent, expr2.dummy_parent, tok_cmp);
 }
 
-int expr_is_equal(Expression *expr1, Expression *expr2) {
-  return ast_is_equal(expr1->dummy_parent, expr2->dummy_parent, tok_cmp);
-}
-
-Expression *expr_copy(Expression *expr) {
-  Ast_Node *tree = expr->dummy_parent;
+Expression expr_copy(Expression expr) {
+  Ast_Node *tree = expr.dummy_parent;
   Ast_Node *copy_root = ast_leaf(tree->value);
   Ast_Iter *it1 = ast_iter_create(tree, PRE);
   Ast_Iter *it2 = ast_iter_create(copy_root, PRE);
@@ -138,5 +132,5 @@ Expression *expr_copy(Expression *expr) {
 
   Expression *p = malloc(sizeof(*p));
   p->dummy_parent = copy_root;
-  return p;
+  return *p;
 }
