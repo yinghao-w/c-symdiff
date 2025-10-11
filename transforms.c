@@ -22,10 +22,10 @@
  * EVALUATION AND SIMPLIFICATION TRANSFORMS *
  * ---------------------------------------- */
 
-struct Ctx {
-	Expression *expr;
-	int changed;
-	void *trans_ctx;
+struct CtxAll {
+  Expression *expr;
+  int changed;
+  void *ctx_trans;
 };
 
 static void ast_attach(Ast_Node *child, Ast_Node *parent) {
@@ -83,13 +83,8 @@ static void ast_replace(Ast_Node *old, Ast_Node *new, Expression *expr) {
   }
 }
 
-struct CtxBase {
-  Expression *expr;
-  int changed;
-};
-
 void eval_apply(Ast_Node *node, void *ctx) {
-  struct CtxBase *base = (struct CtxBase *)ctx;
+  struct CtxAll *ctx_all = ctx;
 
   if (T_IS_OPR(node)) {
     if (T_OPR(node)->arity == 1 && T_IS_SCALAR(node->lchild)) {
@@ -97,7 +92,7 @@ void eval_apply(Ast_Node *node, void *ctx) {
       T_SCALAR(node) = (T_OPR(node)->func)(&T_SCALAR(node->lchild));
       ast_destroy(node->lchild);
       node->lchild = NULL;
-      base->changed = 1;
+      ctx_all->changed = 1;
 
     } else if (T_OPR(node)->arity == 2 && T_IS_SCALAR(node->lchild) &&
                T_IS_SCALAR(node->rchild)) {
@@ -108,54 +103,49 @@ void eval_apply(Ast_Node *node, void *ctx) {
       ast_destroy(node->rchild);
       node->lchild = NULL;
       node->rchild = NULL;
-      base->changed = 1;
+      ctx_all->changed = 1;
     }
   }
 }
 
 struct Simpl {
-	char name[NAME_LENGTH];
-	Opr *opr;
-	Scalar x;
-};
-
-struct CtxSimpl {
-  struct CtxBase base;
-  struct Simpl simpl;
+  char name[NAME_LENGTH];
+  Opr *opr;
+  Scalar x;
 };
 
 void id_apply(Ast_Node *node, void *ctx) {
-  struct CtxSimpl *ctx_simpl = (struct CtxSimpl *)ctx;
-  Opr *opr = ctx_simpl->simpl.opr;
-  Scalar id = ctx_simpl->simpl.x;
-  Expression *expr = ctx_simpl->base.expr;
-  ctx_simpl->base.changed = 0;
+  struct CtxAll *ctx_all = ctx;
+  struct Simpl *simpl = ctx_all->ctx_trans;
+  Expression *expr = ctx_all->expr;
+  Opr *opr = simpl->opr;
+  Scalar id = simpl->x;
 
   if (T_IS_OPR(node) && T_OPR(node) == opr) {
     if (T_IS_SCALAR(node->lchild) && T_SCALAR(node->lchild) == id) {
       ast_merge_replace(node->rchild, expr);
-      ctx_simpl->base.changed = 1;
+      ctx_all->changed = 1;
     } else if (T_IS_SCALAR(node->rchild) && T_SCALAR(node->rchild) == id) {
       ast_merge_replace(node->lchild, expr);
-      ctx_simpl->base.changed = 1;
+      ctx_all->changed = 1;
     }
   }
 }
 
 void absorp_apply(Ast_Node *node, void *ctx) {
-  struct CtxSimpl *ctx_simpl = (struct CtxSimpl *)ctx;
-  Opr *opr = ctx_simpl->simpl.opr;
-  Scalar id = ctx_simpl->simpl.x;
-  Expression *expr = ctx_simpl->base.expr;
-  ctx_simpl->base.changed = 0;
+  struct CtxAll *ctx_all = ctx;
+  struct Simpl *simpl = ctx_all->ctx_trans;
+  Expression *expr = ctx_all->expr;
+  Opr *opr = simpl->opr;
+  Scalar ann = simpl->x;
 
   if (T_IS_OPR(node) && T_OPR(node) == opr) {
-    if (T_IS_SCALAR(node->lchild) && T_SCALAR(node->lchild) == id) {
+    if (T_IS_SCALAR(node->lchild) && T_SCALAR(node->lchild) == ann) {
       ast_merge_replace(node->lchild, expr);
-      ctx_simpl->base.changed = 1;
-    } else if (T_IS_SCALAR(node->rchild) && T_SCALAR(node->rchild) == id) {
+      ctx_all->changed = 1;
+    } else if (T_IS_SCALAR(node->rchild) && T_SCALAR(node->rchild) == ann) {
       ast_merge_replace(node->rchild, expr);
-      ctx_simpl->base.changed = 1;
+      ctx_all->changed = 1;
     }
   }
 }
@@ -168,11 +158,6 @@ struct PatternRule {
   char name[NAME_LENGTH];
   Expression *pattern;
   Expression *replacement;
-};
-
-struct CtxPattern {
-  struct CtxBase base;
-  struct PatternRule rule;
 };
 
 /* Instantiate a associative array to store variable-node bindings. */
@@ -274,16 +259,17 @@ loop_exit:
 }
 
 void match_apply(Ast_Node *node, void *ctx) {
-  struct CtxPattern *ctx_match = (struct CtxPattern *)ctx;
-  Ast_Node *pattern = ctx_match->rule.pattern->ast_tree;
-  Expression *expr = ctx_match->base.expr;
+  struct CtxAll *ctx_all = ctx;
+  struct PatternRule *rule = ctx_all->ctx_trans;
+  Expression *expr = ctx_all->expr;
+  Ast_Node *pattern = rule->pattern->ast_tree;
 
   BindMap *bindings = bind_create(1);
 
   if (match(pattern, node, bindings)) {
 
-    Ast_Node *replacement = ctx_match->rule.replacement->ast_tree;
-    for (size_t i = 0; i < bind_size(bindings); i++) {
+    Ast_Node *replacement = rule->replacement->ast_tree;
+    for (int i = 0; i < bind_size(bindings); i++) {
       ast_detach(bindings->data[i].value);
     }
 
@@ -296,9 +282,7 @@ void match_apply(Ast_Node *node, void *ctx) {
       }
     }
     ast_replace(node, replacement, expr);
-
-  } else {
-    ctx_match->base.changed = 0;
+    ctx_all->changed = 1;
   }
   bind_destroy(bindings);
 }
@@ -307,23 +291,11 @@ void match_apply(Ast_Node *node, void *ctx) {
  * TRANSFORM INITIALISATION *
  * ------------------------ */
 
+#include "../c-generics/fat_pointer.h"
 
-#define DPX_KT int
-#define DPX_VT struct Simpl
-#define DPX_PFX simpl 
-#define DPX_STRUCT_PFX Simpl
-#include "dpx.h"
-
-SimplMap *simpls;
-
-#define DPX_KT int
-#define DPX_VT struct PatternRule
-#define DPX_PFX rule
-#define DPX_STRUCT_PFX Rule
-#include "dpx.h"
-
-RuleMap *rules;
-RuleMap *diff_rules;
+struct Simpl *simpls = NULL;
+struct PatternRule *rules = NULL;
+struct PatternRule *diff_rules = NULL;
 
 static struct PatternRule rule_make(const char name[], char pattern[],
                                     char replacement[]) {
@@ -334,46 +306,65 @@ static struct PatternRule rule_make(const char name[], char pattern[],
   return rule;
 }
 
-void simpls_init(void) {
-	simpls = simpl_create(1);
+static struct Simpl simpl_make(const char name[], Opr *opr, Scalar x) {
+  struct Simpl simpl;
+  strncpy(simpl.name, name, NAME_LENGTH);
+  simpl.opr = opr;
+  simpl.x = x;
+  return simpl;
+}
 
-	simpl_add(0, (struct Simpl){"add id", opr_get('+'), 0}, simpls);
-	simpl_add(1, (struct Simpl){"mul id", opr_get('*'), 1}, simpls);
-	simpl_add(2, (struct Simpl){"mul ann", opr_get('*'), 0}, simpls);
+void simpls_init(void) {
+  fp_push(simpl_make("add id", opr_get('+'), 0), simpls);
+
+  fp_push(simpl_make("mul id", opr_get('*'), 1), simpls);
+  fp_push(simpl_make("mul ann", opr_get('*'), 0), simpls);
 }
 
 void rules_init(void) {
-  rules = rule_create(1);
 
-  rule_add(0, rule_make("- to +", "f - g", "f + -1 * g"), rules);
-  rule_add(1, rule_make("/ to *", "f / g", "f * g ^ -1"), rules);
-  rule_add(2, rule_make("x+x = 2*x", "f + f", "2 * f"), rules);
+  fp_push(rule_make("- to +", "f - g", "f + -1 * g"), rules);
+  fp_push(rule_make("/ to *", "f / g", "f * g ^ -1"), rules);
+  fp_push(rule_make("x+x = 2*x", "f + f", "2 * f"), rules);
 }
 
 void diff_rules_init(void) {
-  diff_rules = rule_create(1);
 
-  rule_add(0, rule_make("constant rule' = 0", "x'c", "0"), diff_rules);
-  rule_add(1, rule_make("self rule' = 1", "x'x", "1"), diff_rules);
-  rule_add(2, rule_make("sum rule", "x'(f + g)'", "x'f + x'g"), diff_rules);
-  rule_add(3, rule_make("product rule", "x'(f * g)'", "(x'f * g) + (f * x'g)"),
-           diff_rules);
-  rule_add(1, rule_make("exp rule", "x'(@ f)", "@ f * x'f"), diff_rules);
+  fp_push(rule_make("constant rule' = 0", "x'c", "0"), diff_rules);
+  fp_push(rule_make("self rule' = 1", "x'x", "1"), diff_rules);
+  fp_push(rule_make("sum rule", "x'(f + g)'", "x'f + x'g"), diff_rules);
+  fp_push(rule_make("product rule", "x'(f * g)'", "(x'f * g) + (f * x'g)"),
+          diff_rules);
+  fp_push(rule_make("exp rule", "x'(@ f)", "@ f * x'f"), diff_rules);
 }
 
 /* --------------------- *
  * RECURSIVE APPLICATION *
  * --------------------- */
 
-int recursive_apply(Ast_Node *node, ORDER order, void trans(Ast_Node *, void *),
-                    void *ctx) {
-  struct CtxBase *base = (struct CtxBase *)ctx;
-  ast_iter_apply(node, order, trans, ctx);
-  return base->changed;
+int rec_apply(Expression *expr, ORDER order, void func(Ast_Node *, void *),
+              void *ctx_trans) {
+  struct CtxAll ctx = {expr, 0, ctx_trans};
+  ast_iter_apply(expr->ast_tree, order, func, &ctx);
+  return ctx.changed;
 }
 
-int rec_apply(Expression *expr, ORDER order, void trans(Ast_Node *, void *), void *ctx_trans) {
-	struct Ctx ctx = {expr, 0, ctx_trans};
-	ast_iter_apply(expr->ast_tree, order, trans, &ctx);
-	return ctx.changed;
+#define MAX_ITERATIONS 50
+
+int diff_apply(Expression *expr) {
+  int changed = 0;
+
+  int j = 0;
+  while (j++ < MAX_ITERATIONS) {
+    int curr_changed = 0;
+    for (int i = 0; i < fp_length(diff_rules); i++) {
+      curr_changed =
+          rec_apply(expr, PRE, match_apply, diff_rules + i) || curr_changed;
+      changed = curr_changed || changed;
+    }
+    if (!curr_changed) {
+      break;
+    }
+  }
+  return changed;
 }

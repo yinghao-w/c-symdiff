@@ -36,14 +36,14 @@ void test_eval_apply(void) {
   Expression *expr1 = expr_create("4 - 9");
   Expression *expr2 = expr_create("2 / 3.9 - 4");
   Expression *expr3 = expr_create("1.1 + 5");
-  struct CtxBase base;
+  struct CtxAll ctx = {expr1, 0, NULL};
 
-  eval_apply(expr1->ast_tree, &base);
+  eval_apply(expr1->ast_tree, &ctx);
   assert(expr1->ast_tree->value.scalar == -5);
   assert(!expr1->ast_tree->lchild);
-  eval_apply(expr2->ast_tree, &base);
+  eval_apply(expr2->ast_tree, &ctx);
   assert(expr2->ast_tree->value.token_type == OPR);
-  eval_apply(expr3->ast_tree, &base);
+  eval_apply(expr3->ast_tree, &ctx);
   assert(expr3->ast_tree->value.scalar - 6.1 < 0.01);
   assert(!expr1->ast_tree->rchild);
 
@@ -56,8 +56,8 @@ void test_eval_apply(void) {
 void test_id_apply(void) {
   Expression *expr1 = expr_create("0 + x");
   Expression *expr2 = expr_create("(5 - @ x)* 1");
-  struct CtxSimpl add_0_ctx = {{expr1, 0}, simpl_get(0, simpls)};
-  struct CtxSimpl mul_1_ctx = {{expr2, 0}, simpl_get(1, simpls)};
+  struct CtxAll add_0_ctx = {expr1, 0, simpl_addr(0, simpls)};
+  struct CtxAll mul_1_ctx = {expr2, 0, simpl_addr(1, simpls)};
 
   Expression *expected_expr1 = expr_create("x");
   Expression *expected_expr2 = expr_create("5 - @ x");
@@ -68,7 +68,7 @@ void test_id_apply(void) {
   assert(expr_is_equal(expr2, expected_expr2));
 
   Expression *expr3 = expr_create("(x + 0) / y");
-  struct CtxSimpl add_0_ctx2 = {{expr3, 0}, simpl_get(0, simpls)};
+  struct CtxAll add_0_ctx2 = {expr3, 0, simpl_addr(0, simpls)};
   Expression *expected_expr3 = expr_create("x / y");
   id_apply(expr3->ast_tree->lchild, &add_0_ctx2);
 
@@ -85,7 +85,7 @@ void test_id_apply(void) {
 
 void test_absorp_apply(void) {
   Expression *expr = expr_create("(3 * 0) * (2 * a - 4)");
-  struct CtxSimpl mul_0_ctx = {{expr, 0}, simpl_get(2, simpls)};
+  struct CtxAll mul_0_ctx = {expr, 0, simpl_addr(2, simpls)};
   Expression *expected_expr1 = expr_create("0 * (2 *a - 4 )");
   Expression *expected_expr2 = expr_create("0");
 
@@ -131,11 +131,10 @@ void test_match(void) {
 void test_match_apply(void) {
   Expression *expr = expr_create("x - (@ x)");
   Expression *expected = expr_create("x + (-1 * @ x)");
-  struct CtxBase base = {expr, 0};
-  struct CtxPattern ctx_match = {base, rule_get(0, rules)};
+  struct CtxAll ctx = {expr, 0, rule_addr(0, rules)};
 
-  match_apply(expr->ast_tree, &ctx_match);
-  assert(ctx_match.base.changed = 1);
+  match_apply(expr->ast_tree, &ctx);
+  assert(ctx.changed = 1);
   assert(ast_is_equal(expr->ast_tree, expected->ast_tree, tok_cmp));
   assert(ast_is_equal(expected->ast_tree, expr->ast_tree, tok_cmp));
 
@@ -144,11 +143,10 @@ void test_match_apply(void) {
 
   expr = expr_create("(a/b) + 0");
   expected = expr_create("a * b^(-1) + 0");
-  base.expr = expr;
-  ctx_match.base = base;
-  ctx_match.rule = rule_get(1,  rules);
+  ctx.expr = expr;
+  ctx.ctx_trans = rule_addr(1,  rules);
 
-  match_apply(expr->ast_tree->lchild, &ctx_match);
+  match_apply(expr->ast_tree->lchild, &ctx);
   assert(ast_is_equal(expr->ast_tree, expected->ast_tree, tok_cmp));
 
   expr_destroy(expr);
