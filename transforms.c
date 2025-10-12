@@ -236,7 +236,7 @@ void match_apply(Ast_Node *node, void *ctx) {
 
   if (match(pattern, node, bindings)) {
 
-    Ast_Node *replacement = get_root(expr_copy(rule->replacement));
+    Ast_Node *replacement = ast_copy(get_root(rule->replacement));
 
     Ast_Iter *it = ast_iter_create(replacement, T_POST);
     for (Ast_Node *repl_node = ast_begin(it); !ast_end(it);

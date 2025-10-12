@@ -101,43 +101,9 @@ int expr_is_equal(Expression expr1, Expression expr2) {
   return ast_is_equal(expr1.dummy_parent, expr2.dummy_parent, tok_cmp);
 }
 
-Expression expr_copy(Expression expr) {
-  Ast_Node *tree = expr.dummy_parent;
-  Ast_Node *copy_root = ast_leaf(tree->value);
-  Ast_Iter *it1 = ast_iter_create(tree, T_PRE);
-  Ast_Iter *it2 = ast_iter_create(copy_root, T_PRE);
-  for (ast_start(it1), ast_start(it2), ast_traverse(it1); !ast_end(it1);
-       ast_traverse(it1)) {
-    switch (it1->dir) {
-    case LCHILD:
-    case RCHILD:
-      break;
-    case LPARENT:
-      if (!it2->head->lchild) {
-        it2->head->lchild = ast_leaf(it1->head->value);
-        it2->head->lchild->parent = it2->head;
-      }
-      break;
-    case RPARENT:
-      if (!it2->head->rchild) {
-        it2->head->rchild = ast_leaf(it1->head->value);
-        it2->head->rchild->parent = it2->head;
-      }
-      break;
-    }
-    ast_traverse(it2);
-  }
-  free(it1);
-  free(it2);
-
-  Expression *p = malloc(sizeof(*p));
-  p->dummy_parent = copy_root;
-  return *p;
-}
-
-Ast_Node *ast_copy(Ast_Node *expr) {
-  Ast_Node *copy_root = ast_leaf(expr->value);
-  Ast_Iter *it1 = ast_iter_create(expr, T_PRE);
+Ast_Node *ast_copy(Ast_Node *root) {
+  Ast_Node *copy_root = ast_leaf(root->value);
+  Ast_Iter *it1 = ast_iter_create(root, T_PRE);
   Ast_Iter *it2 = ast_iter_create(copy_root, T_PRE);
   for (ast_start(it1), ast_start(it2), ast_traverse(it1); !ast_end(it1);
        ast_traverse(it1)) {
@@ -164,4 +130,9 @@ Ast_Node *ast_copy(Ast_Node *expr) {
   free(it2);
 
   return copy_root;
+}
+
+Expression expr_copy(Expression expr) {
+	Ast_Node *dummy_copy = ast_copy(expr.dummy_parent);
+	return (Expression){dummy_copy};
 }

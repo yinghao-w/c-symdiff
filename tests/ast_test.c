@@ -221,12 +221,12 @@ void test_expr_create(void) {
   printf("%s passed\n", __func__);
 }
 
-void test_expr_copy(void) {
+void test_ast_copy(void) {
   for (int i = 0; i < NUM_EXPRS; i++) {
-    Expression original = {test_exprs_all[i].tree};
-    Expression copy = expr_copy(original);
-    assert(expr_is_equal(copy, original));
-    expr_destroy(copy);
+    Ast_Node *original = test_exprs_all[i].tree;
+    Ast_Node *copy = ast_copy(original);
+    assert(ast_is_equal(copy, original, tok_cmp));
+	ast_destroy(copy);
   }
 
   printf("%s passed\n", __func__);
@@ -242,7 +242,7 @@ void run_tests(void) {
   test_expr_create();
   test_expr_is_equal();
   test_tok_cmp();
-  test_expr_copy();
+  test_ast_copy();
 
   test_exprs_teardown();
 }
