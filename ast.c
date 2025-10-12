@@ -104,8 +104,8 @@ int expr_is_equal(Expression expr1, Expression expr2) {
 Expression expr_copy(Expression expr) {
   Ast_Node *tree = expr.dummy_parent;
   Ast_Node *copy_root = ast_leaf(tree->value);
-  Ast_Iter *it1 = ast_iter_create(tree, PRE);
-  Ast_Iter *it2 = ast_iter_create(copy_root, PRE);
+  Ast_Iter *it1 = ast_iter_create(tree, T_PRE);
+  Ast_Iter *it2 = ast_iter_create(copy_root, T_PRE);
   for (ast_start(it1), ast_start(it2), ast_traverse(it1); !ast_end(it1);
        ast_traverse(it1)) {
     switch (it1->dir) {

@@ -149,7 +149,7 @@ void test_detach(void) {
 void test_iter_create(void) {
   TEST_TREE_SETUP();
 
-  I_Iter *it = i_iter_create(node7, POST);
+  I_Iter *it = i_iter_create(node7, T_POST);
   ASSERT_STRUCT(it->root == node7, it, iter_print);
 
   free(it);
@@ -160,7 +160,7 @@ void test_iter_create(void) {
 void test_begin(void) {
   TEST_TREE_SETUP();
 
-  I_Iter *it = i_iter_create(node7, POST);
+  I_Iter *it = i_iter_create(node7, T_POST);
   I_Node *first = i_begin(it);
   ASSERT_STRUCT(first == node1, it, iter_print);
   ASSERT_STRUCT(it->tail == node1, it, iter_print);
@@ -168,12 +168,12 @@ void test_begin(void) {
   ASSERT_STRUCT(first == node1, it, iter_print);
   free(it);
 
-  it = i_iter_create(node6, POST);
+  it = i_iter_create(node6, T_POST);
   ASSERT_STRUCT(i_begin(it) == node5, it, iter_print);
   free(it);
 
   I_Node *leaf = i_leaf(11);
-  it = i_iter_create(leaf, POST);
+  it = i_iter_create(leaf, T_POST);
   ASSERT_STRUCT(i_begin(it) == leaf, it, iter_print);
   free(it);
   free(leaf);
@@ -185,7 +185,7 @@ void test_begin(void) {
 void test_next(void) {
   TEST_TREE_SETUP();
 
-  I_Iter *it = i_iter_create(node7, POST);
+  I_Iter *it = i_iter_create(node7, T_POST);
   i_begin(it);
   ASSERT_STRUCT(i_next(it) == node2, it, iter_print);
   ASSERT_STRUCT(it->tail == node2, it, iter_print);
@@ -216,7 +216,7 @@ void test_next(void) {
 void test_iter(void) {
   TEST_TREE_SETUP();
 
-  I_Iter *it = i_iter_create(node7, POST);
+  I_Iter *it = i_iter_create(node7, T_POST);
   I_Node *node;
   int i;
   for (node = i_begin(it), i = 1; !i_end(it); node = i_next(it), i++) {
@@ -224,17 +224,17 @@ void test_iter(void) {
   }
   free(it);
 
-  it = i_iter_create(node5, POST);
+  it = i_iter_create(node5, T_POST);
   for (node = i_begin(it), i = 5; !i_end(it); node = i_next(it), i++) {
     ASSERT_STRUCT(node->value == 5, it, iter_print);
   }
   assert(i == 6);
   free(it);
 
-  it = i_iter_create(node7, POST);
+  it = i_iter_create(node7, T_POST);
   i = 0;
   for (node = i_begin(it); !i_end(it); node = i_next(it)) {
-    I_Iter *it2 = i_iter_create(node, POST);
+    I_Iter *it2 = i_iter_create(node, T_POST);
     for (i_begin(it2); !i_end(it2); i_next(it2)) {
       i++;
     }
@@ -256,7 +256,7 @@ void test_iter_apply(void) {
   TEST_TREE_SETUP();
 
   int arr[7];
-  i_iter_apply(node7, POST, node_value_get, arr);
+  i_iter_apply(node7, T_POST, node_value_get, arr);
   for (int i = 0; i < 7; i++) {
     assert(arr[i] == i + 1);
   }
@@ -296,17 +296,17 @@ void test_is_equal(void) {
 void test_begin_pre(void) {
   TEST_TREE_SETUP();
 
-  I_Iter *it = i_iter_create(node7, PRE);
+  I_Iter *it = i_iter_create(node7, T_PRE);
   I_Node *first = i_begin(it);
   ASSERT_STRUCT(first == node7, it, iter_print);
   free(it);
 
-  it = i_iter_create(node6, PRE);
+  it = i_iter_create(node6, T_PRE);
   ASSERT_STRUCT(i_begin(it) == node6, it, iter_print);
   free(it);
 
   I_Node *leaf = i_leaf(11);
-  it = i_iter_create(leaf, PRE);
+  it = i_iter_create(leaf, T_PRE);
   ASSERT_STRUCT(i_begin(it) == leaf, it, iter_print);
   free(it);
   free(leaf);
@@ -318,7 +318,7 @@ void test_begin_pre(void) {
 void test_next_pre(void) {
   TEST_TREE_SETUP();
 
-  I_Iter *it = i_iter_create(node7, PRE);
+  I_Iter *it = i_iter_create(node7, T_PRE);
   i_begin(it);
 
   ASSERT_STRUCT(i_next(it) == node4, it, iter_print);
@@ -337,7 +337,7 @@ void test_next_pre(void) {
 void test_iter_pre(void) {
   TEST_TREE_SETUP();
 
-  I_Iter *it = i_iter_create(node7, PRE);
+  I_Iter *it = i_iter_create(node7, T_PRE);
   I_Node *node;
   int a[] = {7, 4, 1, 3, 2, 6, 5};
   int i;
@@ -347,17 +347,17 @@ void test_iter_pre(void) {
   }
   free(it);
 
-  it = i_iter_create(node5, PRE);
+  it = i_iter_create(node5, T_PRE);
   for (node = i_begin(it), i = 5; !i_end(it); node = i_next(it), i++) {
     ASSERT_STRUCT(node->value == 5, it, iter_print);
   }
   assert(i == 6);
   free(it);
 
-  it = i_iter_create(node7, PRE);
+  it = i_iter_create(node7, T_PRE);
   i = 0;
   for (node = i_begin(it); !i_end(it); node = i_next(it)) {
-    I_Iter *it2 = i_iter_create(node, PRE);
+    I_Iter *it2 = i_iter_create(node, T_PRE);
     for (i_begin(it2); !i_end(it2); i_next(it2)) {
       i++;
     }

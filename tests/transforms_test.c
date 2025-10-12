@@ -4,34 +4,6 @@
 #include <assert.h>
 #include <stdio.h>
 
-// struct test_expr {
-// 	char str[32];
-// 	int eval;
-// 	Expression simpl;
-// };
-//
-// #define NUM_EXPRS 3
-//
-// struct test_expr test_exprs[NUM_EXPRS];
-//
-// void test_exprs_setup(void) {
-//   test_exprs[0] = (struct test_expr){
-//       "4 - 9",
-//       3,
-//       NULL,
-//   };
-//   test_exprs[0] = (struct test_expr){
-//       "9 * 8",
-//       72,
-//       NULL,
-//   };
-//   test_exprs[0] = (struct test_expr){
-//       "11 * ",
-//       72,
-//       NULL,
-//   };
-// }
-
 void test_eval_apply(void) {
   Expression expr1 = expr_create("4 - 9");
   Expression expr2 = expr_create("2 / 3.9 - 4");
@@ -154,6 +126,42 @@ void test_match_apply(void) {
   printf("%s passed\n", __func__);
 }
 
+void test_post_it_apply(void) {
+  Expression expr = expr_create("0 + 0 + 3 ");
+  Expression expected = expr_create("3");
+
+  assert(post_it_apply(expr, id_apply, simpls));
+  assert(expr_is_equal(expr, expected));
+
+  expr_destroy(expr);
+  expr_destroy(expected);
+  printf("%s passed\n", __func__);
+}
+
+void test_pre_it_apply(void) {
+  Expression expr = expr_create("a - (b - c)");
+  Expression expected = expr_create("a + -1 * (b + -1 * c)");
+
+  assert(pre_it_apply(expr, match_apply, rules));
+  assert(expr_is_equal(expr, expected));
+
+  expr_destroy(expr);
+  expr_destroy(expected);
+  printf("%s passed\n", __func__);
+}
+
+void test_norm_apply(void) {
+  Expression expr = expr_create("1 - b/c");
+  Expression expected = expr_create("1 + -1 * (b * c ^ -1)");
+
+  assert(norm_apply(expr));
+  assert(expr_is_equal(expr, expected));
+
+  expr_destroy(expr);
+  expr_destroy(expected);
+  printf("%s passed\n", __func__);
+}
+
 void run_tests(void) {
   printf("\n\n%s\n\n", __FILE__);
   opr_set_init();
@@ -170,6 +178,9 @@ void run_tests(void) {
   test_var_match();
   test_match();
   test_match_apply();
+  test_post_it_apply();
+  test_pre_it_apply();
+  test_norm_apply();
 }
 
 int main(void) {

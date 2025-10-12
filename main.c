@@ -11,7 +11,7 @@ int main(void) {
   rules_init();
   diff_rules_init();
 
-  Expression expr = expr_create("x'3 + 4");
+  Expression expr = expr_create("x ' (x + 2)");
   ast_DEBUG_PRINT(get_root(expr), token_print);
   printf("\n");
   diff_apply(expr);

@@ -179,7 +179,7 @@ static int patt_match(const Ast_Node *patt, Ast_Node *node, BindMap *bindings) {
 int match(Ast_Node *pattern, Ast_Node *ast_expr, BindMap *bindings) {
   int matched = 1;
 
-  Ast_Iter *it = ast_iter_create(pattern, PRE);
+  Ast_Iter *it = ast_iter_create(pattern, T_PRE);
   Ast_Node *patt_node = ast_start(it);
   Ast_Node *expr_node = ast_expr;
 
@@ -234,9 +234,9 @@ void match_apply(Ast_Node *node, void *ctx) {
 
   if (match(pattern, node, bindings)) {
 
-    Ast_Node *replacement = get_root(rule->replacement);
+    Ast_Node *replacement = get_root(expr_copy(rule->replacement));
 
-    Ast_Iter *it = ast_iter_create(replacement, POST);
+    Ast_Iter *it = ast_iter_create(replacement, T_POST);
     for (Ast_Node *repl_node = ast_begin(it); !ast_end(it);
          repl_node = ast_next(it)) {
       if (T_IS_VAR(repl_node) && bind_is_in(T_VAR(repl_node), bindings)) {
@@ -295,8 +295,8 @@ void rules_init(void) {
 
 void diff_rules_init(void) {
 
-  fp_push(rule_make("constant rule' = 0", "x'c", "0"), diff_rules);
-  fp_push(rule_make("self rule' = 1", "x'x", "1"), diff_rules);
+  fp_push(rule_make("constant rule", "x'c", "0"), diff_rules);
+  fp_push(rule_make("self rule", "x'x", "1"), diff_rules);
   fp_push(rule_make("sum rule", "x'(f + g)", "x'f + x'g"), diff_rules);
   fp_push(rule_make("product rule", "x'(f * g)", "(x'f * g) + (f * x'g)"),
           diff_rules);
@@ -307,14 +307,17 @@ void diff_rules_init(void) {
  * RECURSIVE APPLICATION *
  * --------------------- */
 
+/* Maybe rethink attach detach philosophy? Overwriting would be simpler on the
+ * iterators. */
+
 /* Apply the transform with func and ctx_trans iteratively on each subnode of
  * the AST. */
-int rec_apply_pre(Expression expr, void func(Ast_Node *, void *),
-                  void *ctx_trans) {
+int pre_it_apply(Expression expr, void func(Ast_Node *, void *),
+                 void *ctx_trans) {
   struct CtxAll ctx = {0, ctx_trans};
 
-  Ast_Iter *it = ast_iter_create(get_root(expr), PRE);
-  for (ast_begin(it); !ast_end(it); ast_next(it)) {
+  Ast_Iter *it = ast_iter_create(expr.dummy_parent, T_PRE);
+  for (ast_begin(it), ast_next(it); !ast_end(it); ast_next(it)) {
 
     Ast_Node *old_head = it->head;
 
@@ -348,7 +351,72 @@ int rec_apply_pre(Expression expr, void func(Ast_Node *, void *),
   return ctx.changed;
 }
 
+/* Apply the transform with func and ctx_trans iteratively on each subnode of
+ * the AST. */
+int post_it_apply(Expression expr, void func(Ast_Node *, void *),
+                  void *ctx_trans) {
+  struct CtxAll ctx = {0, ctx_trans};
+
+  Ast_Iter *it = ast_iter_create(expr.dummy_parent, T_POST);
+  for (ast_begin(it);; ast_next(it)) {
+    if (it->tail == it->root) {
+      break;
+    }
+    Ast_Node *old_tail = it->tail;
+
+    func(it->tail, &ctx);
+
+    /* Since the tree mutations are all detachments and attachments, not
+     * overwriting nodes, we need to update the iterator after each application
+     * of the transform. */
+    switch (it->dir) {
+    case LCHILD:
+      if (it->head->lchild != old_tail) {
+        it->tail = it->head->lchild;
+      }
+      break;
+    case RCHILD:
+      if (it->head->rchild != old_tail) {
+        it->tail = it->head->rchild;
+      }
+      break;
+
+    case LPARENT:
+    case RPARENT:
+      if (it->head->parent != old_tail) {
+        // it->tail = head->parent
+        abort();
+      }
+      break;
+    }
+  }
+
+  return ctx.changed;
+}
+
 #define MAX_ITERATIONS 50
+
+int norm_apply(Expression expr) {
+  int changed = 0;
+
+  int j = 0;
+  while (j++ < MAX_ITERATIONS) {
+    int curr_changed = 0;
+    curr_changed |= post_it_apply(expr, id_apply, simpls);
+    curr_changed |= post_it_apply(expr, id_apply, simpls + 1);
+    curr_changed |= post_it_apply(expr, id_apply, simpls + 2);
+
+    curr_changed |= post_it_apply(expr, match_apply, rules);
+    curr_changed |= post_it_apply(expr, match_apply, rules + 1);
+    curr_changed |= post_it_apply(expr, match_apply, rules + 2);
+
+    changed |= curr_changed;
+    if (!curr_changed) {
+      break;
+    }
+  }
+  return changed;
+}
 
 int diff_apply(Expression expr) {
   int changed = 0;
@@ -357,13 +425,13 @@ int diff_apply(Expression expr) {
   while (j++ < MAX_ITERATIONS) {
     int curr_changed = 0;
     for (int i = 0; i < fp_length(diff_rules); i++) {
-      curr_changed =
-          rec_apply_pre(expr, match_apply, diff_rules + i) || curr_changed;
-      changed = curr_changed || changed;
+      curr_changed |= pre_it_apply(expr, match_apply, diff_rules + i);
     }
+    changed |= curr_changed;
     if (!curr_changed) {
       break;
     }
   }
+  norm_apply(expr);
   return changed;
 }
