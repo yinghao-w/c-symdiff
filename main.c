@@ -5,18 +5,32 @@
 #include "transforms.h"
 #include <stdio.h>
 
-int main(void) {
+void wrapper(Ast_Node *node, void *ctx) {
+	(void)ctx;
+	token_print(node->value);
+	printf(" ");
+}
+
+int main(int argc, char *argv[]) {
   opr_set_init();
   simpls_init();
   rules_init();
   diff_rules_init();
 
-  Expression expr = expr_create("x ' (x + 2)");
-  ast_DEBUG_PRINT(get_root(expr), token_print);
-  printf("\n");
-  diff_apply(expr);
-  ast_DEBUG_PRINT(get_root(expr), token_print);
+  Expression expr = expr_create(argv[1]);
 
-  printf("asdjijasdkjdas\n");
+  printf("Input expression: ");
+  ast_iter_apply(get_root(expr), T_POST, wrapper, NULL);
+  printf("\n");
+
+  printf("Normalised expression: ");
+  norm_apply(expr);
+  ast_iter_apply(get_root(expr), T_POST, wrapper, NULL);
+  printf("\n");
+
+  printf("Differentiated expression: ");
+  diff_apply(expr);
+  ast_iter_apply(get_root(expr), T_POST, wrapper, NULL);
+  printf("\n");
   return 0;
 }

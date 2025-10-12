@@ -62,19 +62,18 @@ void eval_apply(Ast_Node *node, void *ctx) {
 
   if (T_IS_OPR(node)) {
     if (T_OPR(node)->arity == 1 && T_IS_SCALAR(node->lchild)) {
-      T_TYPE(node) = SCALAR;
 
+      // T_TYPE(node) = SCALAR;
       // T_SCALAR(node) = (T_OPR(node)->func)(&T_SCALAR(node->lchild));
       // ast_destroy(node->lchild);
       // node->lchild = NULL;
 
-	  Scalar evaled = (T_OPR(node)->func)(&T_SCALAR(node->lchild));
-      ast_destroy(node->lchild);
-	  Token t;
-	  t.token_type = SCALAR;
-	  t.scalar = evaled;
-	  Ast_Node *new = ast_leaf(t);
-	  ast_overwrite(node, new);
+      Scalar evaled = (T_OPR(node)->func)(&T_SCALAR(node->lchild));
+      Token t;
+      t.token_type = SCALAR;
+      t.scalar = evaled;
+      Ast_Node *new = ast_leaf(t);
+      ast_overwrite(node, new);
 
       ctx_all->changed = 1;
 
@@ -90,14 +89,14 @@ void eval_apply(Ast_Node *node, void *ctx) {
       // node->rchild = NULL;
 
       Scalar arr[2] = {T_SCALAR(node->lchild), T_SCALAR(node->rchild)};
-	  Scalar evaled = (T_OPR(node)->func)(arr);
+      Scalar evaled = (T_OPR(node)->func)(arr);
       // ast_destroy(node->lchild);
       // ast_destroy(node->rchild);
-	  Token t;
-	  t.token_type = SCALAR;
-	  t.scalar = evaled;
-	  Ast_Node *new = ast_leaf(t);
-	  ast_overwrite(node, new);
+      Token t;
+      t.token_type = SCALAR;
+      t.scalar = evaled;
+      Ast_Node *new = ast_leaf(t);
+      ast_overwrite(node, new);
 
       ctx_all->changed = 1;
     }
@@ -118,10 +117,10 @@ void id_apply(Ast_Node *node, void *ctx) {
 
   if (T_IS_OPR(node) && T_OPR(node) == opr) {
     if (T_IS_SCALAR(node->lchild) && T_SCALAR(node->lchild) == id) {
-	  ast_overwrite(node, node->rchild);
+      ast_overwrite(node, node->rchild);
       ctx_all->changed = 1;
     } else if (T_IS_SCALAR(node->rchild) && T_SCALAR(node->rchild) == id) {
-	  ast_overwrite(node, node->lchild);
+      ast_overwrite(node, node->lchild);
       ctx_all->changed = 1;
     }
   }
@@ -135,10 +134,10 @@ void absorp_apply(Ast_Node *node, void *ctx) {
 
   if (T_IS_OPR(node) && T_OPR(node) == opr) {
     if (T_IS_SCALAR(node->lchild) && T_SCALAR(node->lchild) == ann) {
-	  ast_overwrite(node, node->lchild);
+      ast_overwrite(node, node->lchild);
       ctx_all->changed = 1;
     } else if (T_IS_SCALAR(node->rchild) && T_SCALAR(node->rchild) == ann) {
-	  ast_overwrite(node, node->rchild);
+      ast_overwrite(node, node->rchild);
       ctx_all->changed = 1;
     }
   }
@@ -268,10 +267,10 @@ void match_apply(Ast_Node *node, void *ctx) {
          repl_node = ast_next(it)) {
       if (T_IS_VAR(repl_node) && bind_is_in(T_VAR(repl_node), bindings)) {
         Ast_Node *bound_node = ast_copy(bind_get(T_VAR(repl_node), bindings));
-		ast_overwrite(repl_node, bound_node);
+        ast_overwrite(repl_node, bound_node);
       }
     }
-	ast_overwrite(node, replacement);
+    ast_overwrite(node, replacement);
     ctx_all->changed = 1;
   }
   // destroy bindings in side TODO:
@@ -317,6 +316,7 @@ void rules_init(void) {
   fp_push(rule_make("- to +", "f - g", "f + -1 * g"), rules);
   fp_push(rule_make("/ to *", "f / g", "f * g ^ -1"), rules);
   fp_push(rule_make("x+x = 2*x", "f + f", "2 * f"), rules);
+  fp_push(rule_make("x^1 = x", "f ^ 1", "f"), rules);
 }
 
 void diff_rules_init(void) {
@@ -326,6 +326,7 @@ void diff_rules_init(void) {
   fp_push(rule_make("sum rule", "x'(f + g)", "x'f + x'g"), diff_rules);
   fp_push(rule_make("product rule", "x'(f * g)", "(x'f * g) + (f * x'g)"),
           diff_rules);
+  fp_push(rule_make("power rule", "x'(f ^ c)", "c * f ^ (c - 1) * x'f"), diff_rules);
   fp_push(rule_make("exp rule", "x'(@ f)", "@ f * x'f"), diff_rules);
 }
 
@@ -336,7 +337,8 @@ void diff_rules_init(void) {
 /* Maybe rethink attach detach philosophy? Overwriting would be simpler on the
  * iterators. */
 
-int expr_it_apply(Expression expr, ORDER order, void trans(Ast_Node *, void *), void *ctx_trans) {
+int expr_it_apply(Expression expr, ORDER order, void trans(Ast_Node *, void *),
+                  void *ctx_trans) {
   struct CtxAll ctx = {0, ctx_trans};
   ast_iter_apply(get_root(expr), order, trans, &ctx);
   return ctx.changed;
@@ -352,11 +354,14 @@ int norm_apply(Expression expr) {
     int curr_changed = 0;
     curr_changed |= expr_it_apply(expr, T_POST, id_apply, simpls);
     curr_changed |= expr_it_apply(expr, T_POST, id_apply, simpls + 1);
-    curr_changed |= expr_it_apply(expr, T_POST, id_apply, simpls + 2);
+    curr_changed |= expr_it_apply(expr, T_POST, absorp_apply, simpls + 2);
 
     curr_changed |= expr_it_apply(expr, T_POST, match_apply, rules);
     curr_changed |= expr_it_apply(expr, T_POST, match_apply, rules + 1);
     curr_changed |= expr_it_apply(expr, T_POST, match_apply, rules + 2);
+    curr_changed |= expr_it_apply(expr, T_POST, match_apply, rules + 3);
+
+    curr_changed |= expr_it_apply(expr, T_POST, eval_apply, NULL);
 
     changed |= curr_changed;
     if (!curr_changed) {

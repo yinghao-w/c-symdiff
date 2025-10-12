@@ -6,10 +6,6 @@ OUTPUT = main
 
 all:
 	@$(CC) $(CFLAGS) $(INCLUDE) -o $(OUTPUT).out main.c transforms.c ast.c lexer.c symbols.c $(CMATH)
-	./$(OUTPUT).out
-
-run:
-	./$(OUTPUT).out
 
 clean:
 	rm $(OUTPUT).out

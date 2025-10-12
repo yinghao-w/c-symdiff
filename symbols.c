@@ -17,6 +17,8 @@ static float divi(float args[]) { return args[0] / args[1]; }
 
 static float powe(float args[]) { return pow(args[0], args[1]); }
 static float expo(float args[]) { return exp(args[0]); }
+static float sine(float args[]) { return sin(args[0]); }
+static float cosi(float args[]) { return cos(args[0]); }
 
 /* @(x) is exp(x),
  * x'y is (d/dx)(y) */
@@ -31,6 +33,11 @@ void opr_set_init(void) {
   op_add('\'', (Opr){"\'", 2, 5, NULL}, opr_set);
   op_add('(', (Opr){"(", 0, 0, NULL}, opr_set);
   op_add(')', (Opr){")", 0, 0, NULL}, opr_set);
+
+  /*
+   * op_add('s', (Opr){"sin", 1, 4, sine}, opr_set);
+   * op_add('c', (Opr){"cos", 1, 4, cosi}, opr_set);
+   */
 }
 
 Opr *opr_get(const char s) { return op_addr(s, opr_set); }
@@ -51,7 +58,8 @@ int tok_cmp(Token t1, Token t2) {
   } else {
     switch (t1.token_type) {
     case SCALAR:
-      return t1.scalar - t2.scalar < 0.01;
+      /* TODO: add epsilon difference */
+      return t1.scalar == t2.scalar;
       break;
     case VAR:
       return t1.var == t2.var;
@@ -66,7 +74,7 @@ int tok_cmp(Token t1, Token t2) {
 void token_print(Token token) {
   switch (token.token_type) {
   case SCALAR:
-    printf("%.f", token.scalar);
+    printf("%.2f", token.scalar);
     break;
   case VAR:
     printf("%c", token.var);
