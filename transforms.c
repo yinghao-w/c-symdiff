@@ -27,31 +27,34 @@ struct CtxAll {
   void *ctx_trans;
 };
 
-/* Replaces a new's parent with new. */
-static void ast_merge_replace(Ast_Node *new) {
-  assert(new->parent->parent);
-  Ast_Node *parent = new->parent;
-  Ast_Node *grandparent = parent->parent;
-
-  ast_detach(new);
-  ast_detach(parent);
-  ast_attach(new, grandparent);
-
-  ast_destroy(parent);
-}
-
-/* Replaces a node with another. Assumes the two nodes were not connected
- * beforehand. */
-static void ast_replace(Ast_Node *old, Ast_Node *new) {
-  Ast_Node *parent = old->parent;
-
+static void ast_overwrite(Ast_Node *old, Ast_Node *new) {
   if (new->parent) {
     ast_detach(new);
   }
-  ast_detach(old);
-  ast_attach(new, parent);
 
-  ast_destroy(old);
+  Ast_Node *temp;
+
+  if ((temp = old->lchild)) {
+    ast_detach(temp);
+    ast_destroy(temp);
+  }
+  if ((temp = old->rchild)) {
+    ast_detach(temp);
+    ast_destroy(temp);
+  }
+
+  old->value = new->value;
+
+  if ((temp = new->lchild)) {
+    ast_detach(temp);
+    ast_attach(temp, old);
+  }
+  if ((temp = new->rchild)) {
+    ast_detach(temp);
+    ast_attach(temp, old);
+  }
+
+  ast_destroy(new);
 }
 
 void eval_apply(Ast_Node *node, void *ctx) {
@@ -61,6 +64,9 @@ void eval_apply(Ast_Node *node, void *ctx) {
     if (T_OPR(node)->arity == 1 && T_IS_SCALAR(node->lchild)) {
       T_TYPE(node) = SCALAR;
       T_SCALAR(node) = (T_OPR(node)->func)(&T_SCALAR(node->lchild));
+
+      // ast_overwrite(NULL, node);
+
       ast_destroy(node->lchild);
       node->lchild = NULL;
       ctx_all->changed = 1;
@@ -70,6 +76,7 @@ void eval_apply(Ast_Node *node, void *ctx) {
       T_TYPE(node) = SCALAR;
       Scalar arr[2] = {T_SCALAR(node->lchild), T_SCALAR(node->rchild)};
       T_SCALAR(node) = (T_OPR(node)->func)(arr);
+
       ast_destroy(node->lchild);
       ast_destroy(node->rchild);
       node->lchild = NULL;
@@ -93,10 +100,10 @@ void id_apply(Ast_Node *node, void *ctx) {
 
   if (T_IS_OPR(node) && T_OPR(node) == opr) {
     if (T_IS_SCALAR(node->lchild) && T_SCALAR(node->lchild) == id) {
-      ast_merge_replace(node->rchild);
+	  ast_overwrite(node, node->rchild);
       ctx_all->changed = 1;
     } else if (T_IS_SCALAR(node->rchild) && T_SCALAR(node->rchild) == id) {
-      ast_merge_replace(node->lchild);
+	  ast_overwrite(node, node->lchild);
       ctx_all->changed = 1;
     }
   }
@@ -110,10 +117,10 @@ void absorp_apply(Ast_Node *node, void *ctx) {
 
   if (T_IS_OPR(node) && T_OPR(node) == opr) {
     if (T_IS_SCALAR(node->lchild) && T_SCALAR(node->lchild) == ann) {
-      ast_merge_replace(node->lchild);
+	  ast_overwrite(node, node->lchild);
       ctx_all->changed = 1;
     } else if (T_IS_SCALAR(node->rchild) && T_SCALAR(node->rchild) == ann) {
-      ast_merge_replace(node->rchild);
+	  ast_overwrite(node, node->rchild);
       ctx_all->changed = 1;
     }
   }
@@ -243,10 +250,10 @@ void match_apply(Ast_Node *node, void *ctx) {
          repl_node = ast_next(it)) {
       if (T_IS_VAR(repl_node) && bind_is_in(T_VAR(repl_node), bindings)) {
         Ast_Node *bound_node = ast_copy(bind_get(T_VAR(repl_node), bindings));
-        ast_replace(repl_node, bound_node);
+		ast_overwrite(repl_node, bound_node);
       }
     }
-    ast_replace(node, replacement);
+	ast_overwrite(node, replacement);
     ctx_all->changed = 1;
   }
   // destroy bindings in side TODO:
@@ -311,87 +318,9 @@ void diff_rules_init(void) {
 /* Maybe rethink attach detach philosophy? Overwriting would be simpler on the
  * iterators. */
 
-/* Apply the transform with func and ctx_trans iteratively on each subnode of
- * the AST. */
-int pre_it_apply(Expression expr, void func(Ast_Node *, void *),
-                 void *ctx_trans) {
+int expr_it_apply(Expression expr, ORDER order, void trans(Ast_Node *, void *), void *ctx_trans) {
   struct CtxAll ctx = {0, ctx_trans};
-
-  Ast_Iter *it = ast_iter_create(expr.dummy_parent, T_PRE);
-  for (ast_begin(it), ast_next(it); !ast_end(it); ast_next(it)) {
-
-    Ast_Node *old_head = it->head;
-
-    func(it->head, &ctx);
-
-    /* Since the tree mutations are all detachments and attachments, not
-     * overwriting nodes, we need to update the iterator after each application
-     * of the transform. */
-    switch (it->dir) {
-    case LPARENT:
-      if (it->tail->lchild != old_head) {
-        it->head = it->tail->lchild;
-      }
-      break;
-    case RPARENT:
-      if (it->tail->rchild != old_head) {
-        it->head = it->tail->rchild;
-      }
-      break;
-
-    case LCHILD:
-    case RCHILD:
-      if (it->tail->parent != old_head) {
-        // it->head = tail->parent
-        abort();
-      }
-      break;
-    }
-  }
-
-  return ctx.changed;
-}
-
-/* Apply the transform with func and ctx_trans iteratively on each subnode of
- * the AST. */
-int post_it_apply(Expression expr, void func(Ast_Node *, void *),
-                  void *ctx_trans) {
-  struct CtxAll ctx = {0, ctx_trans};
-
-  Ast_Iter *it = ast_iter_create(expr.dummy_parent, T_POST);
-  for (ast_begin(it);; ast_next(it)) {
-    if (it->tail == it->root) {
-      break;
-    }
-    Ast_Node *old_tail = it->tail;
-
-    func(it->tail, &ctx);
-
-    /* Since the tree mutations are all detachments and attachments, not
-     * overwriting nodes, we need to update the iterator after each application
-     * of the transform. */
-    // switch (it->dir) {
-    // case LCHILD:
-    //   if (it->head->lchild != old_tail) {
-    //     it->tail = it->head->lchild;
-    //   }
-    //   break;
-    // case RCHILD:
-    //   if (it->head->rchild != old_tail) {
-    //     it->tail = it->head->rchild;
-    //   }
-    //   break;
-    //
-    // case LPARENT:
-    // case RPARENT:
-    //   if (it->head->parent != old_tail) {
-    //     // it->tail = head->parent
-    //     abort();
-    //   }
-    //   break;
-    // }
-  }
-
+  ast_iter_apply(get_root(expr), order, trans, &ctx);
   return ctx.changed;
 }
 
@@ -403,13 +332,13 @@ int norm_apply(Expression expr) {
   int j = 0;
   while (j++ < MAX_ITERATIONS) {
     int curr_changed = 0;
-    curr_changed |= post_it_apply(expr, id_apply, simpls);
-    curr_changed |= post_it_apply(expr, id_apply, simpls + 1);
-    curr_changed |= post_it_apply(expr, id_apply, simpls + 2);
+    curr_changed |= expr_it_apply(expr, T_POST, id_apply, simpls);
+    curr_changed |= expr_it_apply(expr, T_POST, id_apply, simpls + 1);
+    curr_changed |= expr_it_apply(expr, T_POST, id_apply, simpls + 2);
 
-    curr_changed |= post_it_apply(expr, match_apply, rules);
-    curr_changed |= post_it_apply(expr, match_apply, rules + 1);
-    curr_changed |= post_it_apply(expr, match_apply, rules + 2);
+    curr_changed |= expr_it_apply(expr, T_POST, match_apply, rules);
+    curr_changed |= expr_it_apply(expr, T_POST, match_apply, rules + 1);
+    curr_changed |= expr_it_apply(expr, T_POST, match_apply, rules + 2);
 
     changed |= curr_changed;
     if (!curr_changed) {
@@ -426,7 +355,7 @@ int diff_apply(Expression expr) {
   while (j++ < MAX_ITERATIONS) {
     int curr_changed = 0;
     for (int i = 0; i < fp_length(diff_rules); i++) {
-      curr_changed |= pre_it_apply(expr, match_apply, diff_rules + i);
+      curr_changed |= expr_it_apply(expr, T_PRE, match_apply, diff_rules + i);
     }
     changed |= curr_changed;
     if (!curr_changed) {
