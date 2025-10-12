@@ -134,3 +134,34 @@ Expression expr_copy(Expression expr) {
   p->dummy_parent = copy_root;
   return *p;
 }
+
+Ast_Node *ast_copy(Ast_Node *expr) {
+  Ast_Node *copy_root = ast_leaf(expr->value);
+  Ast_Iter *it1 = ast_iter_create(expr, T_PRE);
+  Ast_Iter *it2 = ast_iter_create(copy_root, T_PRE);
+  for (ast_start(it1), ast_start(it2), ast_traverse(it1); !ast_end(it1);
+       ast_traverse(it1)) {
+    switch (it1->dir) {
+    case LCHILD:
+    case RCHILD:
+      break;
+    case LPARENT:
+      if (!it2->head->lchild) {
+        it2->head->lchild = ast_leaf(it1->head->value);
+        it2->head->lchild->parent = it2->head;
+      }
+      break;
+    case RPARENT:
+      if (!it2->head->rchild) {
+        it2->head->rchild = ast_leaf(it1->head->value);
+        it2->head->rchild->parent = it2->head;
+      }
+      break;
+    }
+    ast_traverse(it2);
+  }
+  free(it1);
+  free(it2);
+
+  return copy_root;
+}

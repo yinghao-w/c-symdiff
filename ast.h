@@ -21,5 +21,6 @@ Expression expr_create(char expr[]);
 void expr_destroy(Expression expr);
 int expr_is_equal(Expression expr1, Expression expr2);
 Expression expr_copy(Expression expr);
+Ast_Node *ast_copy(Ast_Node *expr);
 
 #endif

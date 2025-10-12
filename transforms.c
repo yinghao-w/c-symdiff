@@ -45,7 +45,9 @@ static void ast_merge_replace(Ast_Node *new) {
 static void ast_replace(Ast_Node *old, Ast_Node *new) {
   Ast_Node *parent = old->parent;
 
-  ast_detach(new);
+  if (new->parent) {
+    ast_detach(new);
+  }
   ast_detach(old);
   ast_attach(new, parent);
 
@@ -240,15 +242,14 @@ void match_apply(Ast_Node *node, void *ctx) {
     for (Ast_Node *repl_node = ast_begin(it); !ast_end(it);
          repl_node = ast_next(it)) {
       if (T_IS_VAR(repl_node) && bind_is_in(T_VAR(repl_node), bindings)) {
-        Ast_Node *bound_node = bind_get(T_VAR(repl_node), bindings);
-
-        /* ast_replace automatically detaches repl_node from its parent */
+        Ast_Node *bound_node = ast_copy(bind_get(T_VAR(repl_node), bindings));
         ast_replace(repl_node, bound_node);
       }
     }
     ast_replace(node, replacement);
     ctx_all->changed = 1;
   }
+  // destroy bindings in side TODO:
   bind_destroy(bindings);
 }
 
