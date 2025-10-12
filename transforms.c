@@ -63,24 +63,42 @@ void eval_apply(Ast_Node *node, void *ctx) {
   if (T_IS_OPR(node)) {
     if (T_OPR(node)->arity == 1 && T_IS_SCALAR(node->lchild)) {
       T_TYPE(node) = SCALAR;
-      T_SCALAR(node) = (T_OPR(node)->func)(&T_SCALAR(node->lchild));
 
-      // ast_overwrite(NULL, node);
+      // T_SCALAR(node) = (T_OPR(node)->func)(&T_SCALAR(node->lchild));
+      // ast_destroy(node->lchild);
+      // node->lchild = NULL;
 
+	  Scalar evaled = (T_OPR(node)->func)(&T_SCALAR(node->lchild));
       ast_destroy(node->lchild);
-      node->lchild = NULL;
+	  Token t;
+	  t.token_type = SCALAR;
+	  t.scalar = evaled;
+	  Ast_Node *new = ast_leaf(t);
+	  ast_overwrite(node, new);
+
       ctx_all->changed = 1;
 
     } else if (T_OPR(node)->arity == 2 && T_IS_SCALAR(node->lchild) &&
                T_IS_SCALAR(node->rchild)) {
-      T_TYPE(node) = SCALAR;
-      Scalar arr[2] = {T_SCALAR(node->lchild), T_SCALAR(node->rchild)};
-      T_SCALAR(node) = (T_OPR(node)->func)(arr);
+      // T_TYPE(node) = SCALAR;
+      // Scalar arr[2] = {T_SCALAR(node->lchild), T_SCALAR(node->rchild)};
+      // T_SCALAR(node) = (T_OPR(node)->func)(arr);
+      //
+      // ast_destroy(node->lchild);
+      // ast_destroy(node->rchild);
+      // node->lchild = NULL;
+      // node->rchild = NULL;
 
-      ast_destroy(node->lchild);
-      ast_destroy(node->rchild);
-      node->lchild = NULL;
-      node->rchild = NULL;
+      Scalar arr[2] = {T_SCALAR(node->lchild), T_SCALAR(node->rchild)};
+	  Scalar evaled = (T_OPR(node)->func)(arr);
+      // ast_destroy(node->lchild);
+      // ast_destroy(node->rchild);
+	  Token t;
+	  t.token_type = SCALAR;
+	  t.scalar = evaled;
+	  Ast_Node *new = ast_leaf(t);
+	  ast_overwrite(node, new);
+
       ctx_all->changed = 1;
     }
   }
