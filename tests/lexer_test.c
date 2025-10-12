@@ -41,13 +41,13 @@ void test_match(void) {
   Token token;
   char s1[] = "12.3ba";
   char *t = s1;
-  assert(match(&t, &token) == MATCHSUCCESS);
+  assert(match(&t, &token) == MATCH_SUCCESS);
   assert(token.token_type == SCALAR);
   assert(token.scalar - 12.3 < epsilon);
 
   char s2[] = "i+";
   t = s2;
-  assert(match(&t, &token) == MATCHSUCCESS);
+  assert(match(&t, &token) == MATCH_SUCCESS);
   assert(token.token_type == VAR);
   assert(token.var = 'i');
 
@@ -59,11 +59,11 @@ void test_match(void) {
 
   char s4[] = ":99.a";
   t = s4;
-  assert(match(&t, &token) == MATCHERROR);
+  assert(match(&t, &token) == MATCH_ERROR);
 
   char s5[] = "";
   t = s5;
-  assert(match(&t, &token) == MATCHERROR);
+  assert(match(&t, &token) == MATCH_ERROR);
 
   printf("%s passed\n", __func__);
 }

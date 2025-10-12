@@ -57,15 +57,15 @@ void test_id_apply(void) {
   printf("%s passed\n", __func__);
 }
 
-void test_absorp_apply(void) {
+void test_ann_apply(void) {
   Expression expr = expr_create("(3 * 0) * (2 * a - 4)");
   struct CtxAll mul_0_ctx = {0, simpls + 2};
   Expression expected_expr1 = expr_create("0 * (2 *a - 4 )");
   Expression expected_expr2 = expr_create("0");
 
-  absorp_apply(get_root(expr)->lchild, &mul_0_ctx);
+  ann_apply(get_root(expr)->lchild, &mul_0_ctx);
   assert(expr_is_equal(expr, expected_expr1));
-  absorp_apply(get_root(expr), &mul_0_ctx);
+  ann_apply(get_root(expr), &mul_0_ctx);
   assert(expr_is_equal(expr, expected_expr2));
 
   expr_destroy(expr);
@@ -127,30 +127,6 @@ void test_match_apply(void) {
 
   printf("%s passed\n", __func__);
 }
-//
-// void test_post_it_apply(void) {
-//   Expression expr = expr_create("0 + 0 + 3 ");
-//   Expression expected = expr_create("3");
-//
-//   assert(post_it_apply(expr, id_apply, simpls));
-//   assert(expr_is_equal(expr, expected));
-//
-//   expr_destroy(expr);
-//   expr_destroy(expected);
-//   printf("%s passed\n", __func__);
-// }
-//
-// void test_pre_it_apply(void) {
-//   Expression expr = expr_create("a - (b - c)");
-//   Expression expected = expr_create("a + -1 * (b + -1 * c)");
-//
-//   assert(pre_it_apply(expr, match_apply, rules));
-//   assert(expr_is_equal(expr, expected));
-//
-//   expr_destroy(expr);
-//   expr_destroy(expected);
-//   printf("%s passed\n", __func__);
-// }
 
 void test_norm_apply(void) {
   Expression expr = expr_create("1 - b/c");
@@ -173,15 +149,13 @@ void run_tests(void) {
   simpls_init();
 
   test_id_apply();
-  test_absorp_apply();
+  test_ann_apply();
 
   rules_init();
 
   test_var_match();
   test_match();
   test_match_apply();
-  // test_post_it_apply();
-  // test_pre_it_apply();
   test_norm_apply();
 }
 

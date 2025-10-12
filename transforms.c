@@ -1,3 +1,4 @@
+#include "transforms.h"
 #include "ast.h"
 #include "symbols.h"
 #include <assert.h>
@@ -63,11 +64,6 @@ void eval_apply(Ast_Node *node, void *ctx) {
   if (T_IS_OPR(node)) {
     if (T_OPR(node)->arity == 1 && T_IS_SCALAR(node->lchild)) {
 
-      // T_TYPE(node) = SCALAR;
-      // T_SCALAR(node) = (T_OPR(node)->func)(&T_SCALAR(node->lchild));
-      // ast_destroy(node->lchild);
-      // node->lchild = NULL;
-
       Scalar evaled = (T_OPR(node)->func)(&T_SCALAR(node->lchild));
       Token t;
       t.token_type = SCALAR;
@@ -79,19 +75,9 @@ void eval_apply(Ast_Node *node, void *ctx) {
 
     } else if (T_OPR(node)->arity == 2 && T_IS_SCALAR(node->lchild) &&
                T_IS_SCALAR(node->rchild)) {
-      // T_TYPE(node) = SCALAR;
-      // Scalar arr[2] = {T_SCALAR(node->lchild), T_SCALAR(node->rchild)};
-      // T_SCALAR(node) = (T_OPR(node)->func)(arr);
-      //
-      // ast_destroy(node->lchild);
-      // ast_destroy(node->rchild);
-      // node->lchild = NULL;
-      // node->rchild = NULL;
 
       Scalar arr[2] = {T_SCALAR(node->lchild), T_SCALAR(node->rchild)};
       Scalar evaled = (T_OPR(node)->func)(arr);
-      // ast_destroy(node->lchild);
-      // ast_destroy(node->rchild);
       Token t;
       t.token_type = SCALAR;
       t.scalar = evaled;
@@ -126,7 +112,7 @@ void id_apply(Ast_Node *node, void *ctx) {
   }
 }
 
-void absorp_apply(Ast_Node *node, void *ctx) {
+void ann_apply(Ast_Node *node, void *ctx) {
   struct CtxAll *ctx_all = ctx;
   struct Simpl *simpl = ctx_all->ctx_trans;
   Opr *opr = simpl->opr;
@@ -306,7 +292,6 @@ static struct Simpl simpl_make(const char name[], Opr *opr, Scalar x) {
 
 void simpls_init(void) {
   fp_push(simpl_make("add id", opr_get('+'), 0), simpls);
-
   fp_push(simpl_make("mul id", opr_get('*'), 1), simpls);
   fp_push(simpl_make("mul ann", opr_get('*'), 0), simpls);
 }
@@ -326,7 +311,8 @@ void diff_rules_init(void) {
   fp_push(rule_make("sum rule", "x'(f + g)", "x'f + x'g"), diff_rules);
   fp_push(rule_make("product rule", "x'(f * g)", "(x'f * g) + (f * x'g)"),
           diff_rules);
-  fp_push(rule_make("power rule", "x'(f ^ c)", "c * f ^ (c - 1) * x'f"), diff_rules);
+  fp_push(rule_make("power rule", "x'(f ^ c)", "c * f ^ (c - 1) * x'f"),
+          diff_rules);
   fp_push(rule_make("exp rule", "x'(@ f)", "@ f * x'f"), diff_rules);
 }
 
@@ -354,12 +340,11 @@ int norm_apply(Expression expr) {
     int curr_changed = 0;
     curr_changed |= expr_it_apply(expr, T_POST, id_apply, simpls);
     curr_changed |= expr_it_apply(expr, T_POST, id_apply, simpls + 1);
-    curr_changed |= expr_it_apply(expr, T_POST, absorp_apply, simpls + 2);
+    curr_changed |= expr_it_apply(expr, T_POST, ann_apply, simpls + 2);
 
-    curr_changed |= expr_it_apply(expr, T_POST, match_apply, rules);
-    curr_changed |= expr_it_apply(expr, T_POST, match_apply, rules + 1);
-    curr_changed |= expr_it_apply(expr, T_POST, match_apply, rules + 2);
-    curr_changed |= expr_it_apply(expr, T_POST, match_apply, rules + 3);
+    for (int i = 0; i < fp_length(rules); i++) {
+      curr_changed |= expr_it_apply(expr, T_POST, match_apply, rules + i);
+    }
 
     curr_changed |= expr_it_apply(expr, T_POST, eval_apply, NULL);
 

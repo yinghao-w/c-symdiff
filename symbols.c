@@ -34,10 +34,8 @@ void opr_set_init(void) {
   op_add('(', (Opr){"(", 0, 0, NULL}, opr_set);
   op_add(')', (Opr){")", 0, 0, NULL}, opr_set);
 
-  /*
-   * op_add('s', (Opr){"sin", 1, 4, sine}, opr_set);
-   * op_add('c', (Opr){"cos", 1, 4, cosi}, opr_set);
-   */
+  op_add('s', (Opr){"sin", 1, 4, sine}, opr_set);
+  // op_add('c', (Opr){"cos", 1, 4, cosi}, opr_set);
 }
 
 Opr *opr_get(const char s) { return op_addr(s, opr_set); }

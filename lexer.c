@@ -70,35 +70,35 @@ static float sec_atof(const char *restrict s0, const char *restrict s1) {
 }
 
 typedef enum {
-  MATCHSUCCESS,
-  MATCHERROR,
-} MATCHCODE;
+  MATCH_SUCCESS,
+  MATCH_ERROR,
+} MATCH_CODE;
 
 /* Attempts to match the largest string possible from *remainder onwards to a
  * token type. If successful, outputs with the token parameter and returns 0. */
-static MATCHCODE match(char *remainder[], Token *token) {
+static MATCH_CODE match(char *remainder[], Token *token) {
   char *start = *remainder;
   char *best = start;
   char *end = start;
   TOKEN_TYPE best_type;
   do {
     end++;
-    if (scalar_match(start, end)) {
+    if (opr_match(start, end)) {
       best = end;
-      best_type = SCALAR;
+      best_type = OPR;
     } else if (var_match(start, end)) {
       best = end;
       best_type = VAR;
-    } else if (opr_match(start, end)) {
+    } else if (scalar_match(start, end)) {
       best = end;
-      best_type = OPR;
+      best_type = SCALAR;
     } else if (best != start) {
       break;
     }
   } while (*end);
 
   if (best == start) {
-    return MATCHERROR;
+    return MATCH_ERROR;
   } else {
 
     token->token_type = best_type;
@@ -115,7 +115,7 @@ static MATCHCODE match(char *remainder[], Token *token) {
       break;
     }
     *remainder = best;
-    return MATCHSUCCESS;
+    return MATCH_SUCCESS;
   }
 }
 
@@ -128,7 +128,7 @@ Token *lexer(char s[]) {
   while (**remainder) {
     Token token;
     int matched = match(remainder, &token);
-    if (matched == MATCHERROR) {
+    if (matched == MATCH_ERROR) {
       fprintf(stderr, "Error: Could not analyse all characters.\n");
       break;
     } else {
