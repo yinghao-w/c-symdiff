@@ -370,26 +370,26 @@ int post_it_apply(Expression expr, void func(Ast_Node *, void *),
     /* Since the tree mutations are all detachments and attachments, not
      * overwriting nodes, we need to update the iterator after each application
      * of the transform. */
-    switch (it->dir) {
-    case LCHILD:
-      if (it->head->lchild != old_tail) {
-        it->tail = it->head->lchild;
-      }
-      break;
-    case RCHILD:
-      if (it->head->rchild != old_tail) {
-        it->tail = it->head->rchild;
-      }
-      break;
-
-    case LPARENT:
-    case RPARENT:
-      if (it->head->parent != old_tail) {
-        // it->tail = head->parent
-        abort();
-      }
-      break;
-    }
+    // switch (it->dir) {
+    // case LCHILD:
+    //   if (it->head->lchild != old_tail) {
+    //     it->tail = it->head->lchild;
+    //   }
+    //   break;
+    // case RCHILD:
+    //   if (it->head->rchild != old_tail) {
+    //     it->tail = it->head->rchild;
+    //   }
+    //   break;
+    //
+    // case LPARENT:
+    // case RPARENT:
+    //   if (it->head->parent != old_tail) {
+    //     // it->tail = head->parent
+    //     abort();
+    //   }
+    //   break;
+    // }
   }
 
   return ctx.changed;
