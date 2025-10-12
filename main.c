@@ -5,10 +5,25 @@
 #include "transforms.h"
 #include <stdio.h>
 
-void wrapper(Ast_Node *node, void *ctx) {
-	(void)ctx;
-	token_print(node->value);
-	printf(" ");
+void recursive_print(Ast_Node *node) {
+  if (ast_is_leaf(node)) {
+    printf(" ");
+    token_print(node->value);
+    printf(" ");
+    return;
+  }
+
+  printf("(");
+  if (node->lchild) {
+    recursive_print(node->lchild);
+  }
+  printf(" ");
+  token_print(node->value);
+  printf(" ");
+  if (node->rchild) {
+    recursive_print(node->rchild);
+  }
+  printf(")");
 }
 
 int main(int argc, char *argv[]) {
@@ -17,20 +32,22 @@ int main(int argc, char *argv[]) {
   rules_init();
   diff_rules_init();
 
-  Expression expr = expr_create(argv[1]);
+  while (1) {
+    char input[100];
+	fgets(input, 100, stdin);
+	if (input[0] == 'q' && input[1] == '\n') {
+		break;
+	}
+    Expression expr = expr_create(input);
+    recursive_print(get_root(expr));
+	printf("\n");
+    norm_apply(expr);
+    recursive_print(get_root(expr));
+	printf("\n");
+    diff_apply(expr);
+    recursive_print(get_root(expr));
+	printf("\n");
+  }
 
-  printf("Input expression: ");
-  ast_iter_apply(get_root(expr), T_POST, wrapper, NULL);
-  printf("\n");
-
-  printf("Normalised expression: ");
-  norm_apply(expr);
-  ast_iter_apply(get_root(expr), T_POST, wrapper, NULL);
-  printf("\n");
-
-  printf("Differentiated expression: ");
-  diff_apply(expr);
-  ast_iter_apply(get_root(expr), T_POST, wrapper, NULL);
-  printf("\n");
   return 0;
 }
