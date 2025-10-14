@@ -11,18 +11,18 @@
 
 OpMap *opr_set;
 
-static float add(float args[]) { return args[0] + args[1]; }
-static float sub(float args[]) { return args[0] - args[1]; }
-static float mul(float args[]) { return args[0] * args[1]; }
-static float divi(float args[]) { return args[0] / args[1]; }
+static float add(const float args[]) { return args[0] + args[1]; }
+static float sub(const float args[]) { return args[0] - args[1]; }
+static float mul(const float args[]) { return args[0] * args[1]; }
+static float divi(const float args[]) { return args[0] / args[1]; }
 
-static float powe(float args[]) { return pow(args[0], args[1]); }
-static float expo(float args[]) { return exp(args[0]); }
-static float sine(float args[]) { return sin(args[0]); }
-static float cosi(float args[]) { return cos(args[0]); }
+static float powe(const float args[]) { return pow(args[0], args[1]); }
+static float expo(const float args[]) { return exp(args[0]); }
+static float loga(const float args[]) { return log(args[0]); }
+static float sine(const float args[]) { return sin(args[0]); }
+static float cosi(const float args[]) { return cos(args[0]); }
 
-/* @(x) is exp(x),
- * x'y is (d/dx)(y) */
+/* x'y is (d/dx)(y) */
 void opr_set_init(void) {
   opr_set = op_create(1);
   op_add('+', (Opr){"+", 2, 1, add}, opr_set);
@@ -30,13 +30,16 @@ void opr_set_init(void) {
   op_add('*', (Opr){"*", 2, 2, mul}, opr_set);
   op_add('/', (Opr){"/", 2, 2, divi}, opr_set);
   op_add('^', (Opr){"^", 2, 3, powe}, opr_set);
-  op_add('@', (Opr){"@", 1, 4, expo}, opr_set);
+
+  op_add('e', (Opr){"exp", 1, 4, expo}, opr_set);
+  op_add('l', (Opr){"log", 1, 4, loga}, opr_set);
+  op_add('s', (Opr){"sin", 1, 4, sine}, opr_set);
+  op_add('c', (Opr){"cos", 1, 4, cosi}, opr_set);
+
   op_add('\'', (Opr){"\'", 2, 5, NULL}, opr_set);
   op_add('(', (Opr){"(", 0, 0, NULL}, opr_set);
   op_add(')', (Opr){")", 0, 0, NULL}, opr_set);
 
-  op_add('s', (Opr){"sin", 1, 4, sine}, opr_set);
-  op_add('c', (Opr){"cos", 1, 4, cosi}, opr_set);
 }
 
 void opr_set_cleanup(void) { op_destroy(opr_set); }

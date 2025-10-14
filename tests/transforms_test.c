@@ -29,12 +29,12 @@ void test_eval_apply(void) {
 
 void test_id_apply(void) {
   Expression expr1 = expr_create("0 + x");
-  Expression expr2 = expr_create("(5 - @ x)* 1");
+  Expression expr2 = expr_create("(5 - exp x)* 1");
   struct CtxAll add_0_ctx = {0, simpls};
   struct CtxAll mul_1_ctx = {0, simpls + 1};
 
   Expression expected_expr1 = expr_create("x");
-  Expression expected_expr2 = expr_create("5 - @ x");
+  Expression expected_expr2 = expr_create("5 - exp x");
 
   id_apply(get_root(expr1), &add_0_ctx);
   id_apply(get_root(expr2), &mul_1_ctx);
@@ -103,8 +103,8 @@ void test_match(void) {
 }
 
 void test_match_apply(void) {
-  Expression expr = expr_create("x - (@ x)");
-  Expression expected = expr_create("x + (-1 * @ x)");
+  Expression expr = expr_create("x - (exp x)");
+  Expression expected = expr_create("x + (-1 * exp x)");
   struct CtxAll ctx = {0, rules};
 
   match_apply(get_root(expr), &ctx);

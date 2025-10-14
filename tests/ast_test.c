@@ -32,7 +32,7 @@ void opr_set_setup(void) { opr_set_init(); }
   Token divi = {.token_type = OPR};                                            \
   divi.opr = opr_get("/");                                                     \
   Token exp = {.token_type = OPR};                                             \
-  exp.opr = opr_get("@");                                                      \
+  exp.opr = opr_get("exp");                                                      \
   Token lp = {.token_type = OPR};                                              \
   lp.opr = opr_get("(");                                                       \
   Token rp = {.token_type = OPR};                                              \
@@ -91,7 +91,7 @@ void test_exprs_setup(void) {
   };
 
   test_exprs_all[1] = (struct test_exprs_formats){
-      "1.5/ (b + @( c ))",
+      "1.5/ (b + exp( c ))",
       {
           (Token){SCALAR, {1.5}},
           divi,
@@ -129,7 +129,7 @@ void test_exprs_setup(void) {
   };
 
   test_exprs_all[2] = (struct test_exprs_formats){
-      "@ x - -7.8 * x",
+      "exp x - -7.8 * x",
       {
           exp,
           x,
@@ -182,11 +182,11 @@ void test_lexer_2(void) {
 }
 
 void test_expr_is_equal(void) {
-  Expression ast_s = expr_create("  @(7- 5.2)");
-  Expression ast_t = expr_create("@ ( 7 - 5.2) ");
+  Expression ast_s = expr_create("  exp(7- 5.2)");
+  Expression ast_t = expr_create("exp ( 7 - 5.2) ");
   assert(expr_is_equal(ast_s, ast_t));
 
-  Expression ast_u = expr_create("@ (7 / 5.2)  ");
+  Expression ast_u = expr_create("exp (7 / 5.2)  ");
   assert(!expr_is_equal(ast_s, ast_u));
 
   Expression ast_a = expr_create("1 + x + 3");

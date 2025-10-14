@@ -8,7 +8,7 @@ typedef struct {
   char repr[REPR_LENGTH];
   int arity;
   int precedence;
-  float (*func)(float *args);
+  float (*func)(const float *args);
 } Opr;
 
 /* Initialise and cleanup global operator definitions. */

@@ -313,7 +313,8 @@ void diff_rules_init(void) {
           diff_rules);
   fp_push(rule_make("power rule", "x'(f ^ c)", "c * f ^ (c - 1) * x'f"),
           diff_rules);
-  fp_push(rule_make("exp rule", "x'(@ f)", "@ f * x'f"), diff_rules);
+  fp_push(rule_make("exp rule", "x'(exp f)", "exp f * x'f"), diff_rules);
+  fp_push(rule_make("log rule", "x'(log f)", "f ^ -1 * x'f"), diff_rules);
   fp_push(rule_make("sine rule", "x'(sin f)", "cos f * x'f"), diff_rules);
   fp_push(rule_make("cosine rule", "x'(cos f)", "-1 * sin f * x'f"), diff_rules);
 }
@@ -321,9 +322,6 @@ void diff_rules_init(void) {
 /* --------------------- *
  * RECURSIVE APPLICATION *
  * --------------------- */
-
-/* Maybe rethink attach detach philosophy? Overwriting would be simpler on the
- * iterators. */
 
 int expr_it_apply(Expression expr, ORDER order, void trans(Ast_Node *, void *),
                   void *ctx_trans) {
@@ -367,11 +365,11 @@ int diff_apply(Expression expr) {
     for (int i = 0; i < fp_length(diff_rules); i++) {
       curr_changed |= expr_it_apply(expr, T_PRE, match_apply, diff_rules + i);
     }
+    curr_changed |= norm_apply(expr);
     changed |= curr_changed;
     if (!curr_changed) {
       break;
     }
   }
-  norm_apply(expr);
   return changed;
 }
