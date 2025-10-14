@@ -1,28 +1,8 @@
 #define T_DEBUG
 #define SYMBOLS_DEBUG
-#include "transforms.h"
+#include "ast.c"
 #include <stdio.h>
 
-void recursive_print(Ast_Node *node) {
-  if (ast_is_leaf(node)) {
-    printf(" ");
-    tok_print(node->value);
-    printf(" ");
-    return;
-  }
-
-  printf("(");
-  if (node->lchild) {
-    recursive_print(node->lchild);
-  }
-  printf(" ");
-  tok_print(node->value);
-  printf(" ");
-  if (node->rchild) {
-    recursive_print(node->rchild);
-  }
-  printf(")");
-}
 
 int main(int argc, char *argv[]) {
   opr_set_init();
@@ -37,13 +17,13 @@ int main(int argc, char *argv[]) {
 		break;
 	}
     Expression expr = expr_create(input);
-    recursive_print(get_root(expr));
+	expr_print(expr);
 	printf("\n");
     norm_apply(expr);
-    recursive_print(get_root(expr));
+	expr_print(expr);
 	printf("\n");
     diff_apply(expr);
-    recursive_print(get_root(expr));
+	expr_print(expr);
 	printf("\n");
   }
 

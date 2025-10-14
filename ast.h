@@ -4,23 +4,20 @@
 
 #include "symbols.h"
 
-#define T_TYPE Token
-#define T_PREFIX ast
-#define T_STRUCT_PREFIX Ast
-#include "tree.h"
-
 typedef struct Expression Expression;
-struct Expression {
-  Ast_Node *dummy_parent;
-};
-
-Ast_Node *get_root(Expression expr);
-void set_root(Ast_Node *root, Expression expr);
 
 Expression expr_create(char expr[]);
 void expr_destroy(Expression expr);
-int expr_is_equal(Expression expr1, Expression expr2);
 Expression expr_copy(Expression expr);
-Ast_Node *ast_copy(Ast_Node *expr);
+int expr_is_equal(Expression expr1, Expression expr2);
+
+void simpls_init(void);
+void rules_init(void);
+void diff_rules_init(void);
+
+int norm_apply(Expression expr);
+int diff_apply(Expression expr);
+
+void expr_print(Expression expr);
 
 #endif

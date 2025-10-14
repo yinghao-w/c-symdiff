@@ -5,7 +5,7 @@ INCLUDE = -I ../c-generics
 OUTPUT = main
 
 all:
-	@$(CC) $(CFLAGS) $(INCLUDE) -o $(OUTPUT).out main.c transforms.c ast.c lexer.c symbols.c $(CMATH)
+	@$(CC) $(CFLAGS) $(INCLUDE) -o $(OUTPUT).out main.c lexer.c symbols.c $(CMATH)
 
 clean:
 	rm $(OUTPUT).out
