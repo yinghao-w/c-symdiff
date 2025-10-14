@@ -1,4 +1,6 @@
+#define SYMBOLS_DEBUG
 #include "lexer.c"
+#include "symbols.h"
 #include <assert.h>
 #include <stdio.h>
 
@@ -68,6 +70,23 @@ void test_match(void) {
   printf("%s passed\n", __func__);
 }
 
+void test_mul_insert(void) {
+  Token token1 = {SCALAR, {-5}};
+  Token token2 = {.token_type = VAR};
+  token2.var = 'x';
+  Token *tokens = NULL;
+  fp_push(token1, tokens);
+  fp_push(token2, tokens);
+
+  mul_insert(tokens);
+  assert(fp_length(tokens) == 3);
+  assert(tokens[1].token_type == OPR);
+  assert(tokens[1].opr == opr_get('*'));
+
+  fp_destroy(tokens);
+  printf("%s passed\n", __func__);
+}
+
 void test_lexer(void) {
   Token *tokens = lexer(" 1 +3.2/ x  ");
 
@@ -75,6 +94,12 @@ void test_lexer(void) {
   assert(tokens[0].scalar - 1 < epsilon);
   assert(tokens[1].token_type == OPR);
   assert(tokens[4].var = 'x');
+  fp_destroy(tokens);
+
+  tokens = lexer("x y - 11");
+  assert(fp_length(tokens) == 5);
+  assert(tokens[1].token_type == OPR);
+  assert(tokens[4].scalar == 11);
   fp_destroy(tokens);
 
   printf("%s passed\n", __func__);
@@ -88,7 +113,10 @@ void run_tests(void) {
   test_var_match();
   test_opr_match();
   test_match();
+  test_mul_insert();
   test_lexer();
+
+  opr_set_cleanup();
 }
 
 int main(void) {

@@ -43,15 +43,6 @@ static int opr_match(const char *restrict s0, const char *restrict s1) {
   }
 }
 
-static int white_space_match(const char *restrict s0, const char *restrict s1) {
-  for (; s0 != s1; s0++) {
-    if (!isspace(*s0)) {
-      return 0;
-    }
-  }
-  return 1;
-}
-
 static void l_strip(char *remainder[]) {
   while (isspace(**remainder)) {
     (*remainder)++;
@@ -119,10 +110,23 @@ static MATCH_CODE match(char *remainder[], Token *token) {
   }
 }
 
+/* Add implied multiplication into a processed array of tokens, i.e.
+ * 2 x -> 2 * x */
+Token *mul_insert(Token tokens[]) {
+  for (size_t i = 1; i < fp_length(tokens); i++) {
+    if (tokens[i - 1].token_type != OPR && tokens[i].token_type != OPR) {
+      Token mul = {.token_type = OPR};
+      mul.opr = opr_get('*');
+      fp_insert(mul, i, tokens);
+    }
+  }
+  return tokens;
+}
+
 /* Returns a array of tokens processed from the string s. */
-Token *lexer(char s[]) {
+Token *lexer(char input[]) {
   Token *tokens = NULL;
-  char **remainder = &s;
+  char **remainder = &input;
   l_strip(remainder);
 
   while (**remainder) {
@@ -133,8 +137,11 @@ Token *lexer(char s[]) {
       break;
     } else {
       fp_push(token, tokens);
-	  l_strip(remainder);
+      l_strip(remainder);
     }
   }
+  /* Reassign array location back to tokens in case it was relocated. */
+  tokens = mul_insert(tokens);
+
   return tokens;
 }
