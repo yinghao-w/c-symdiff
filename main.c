@@ -8,7 +8,7 @@
 void recursive_print(Ast_Node *node) {
   if (ast_is_leaf(node)) {
     printf(" ");
-    token_print(node->value);
+    tok_print(node->value);
     printf(" ");
     return;
   }
@@ -18,7 +18,7 @@ void recursive_print(Ast_Node *node) {
     recursive_print(node->lchild);
   }
   printf(" ");
-  token_print(node->value);
+  tok_print(node->value);
   printf(" ");
   if (node->rchild) {
     recursive_print(node->rchild);

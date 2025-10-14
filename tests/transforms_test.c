@@ -94,7 +94,7 @@ void test_match(void) {
   assert(bind_size(bindings) == 1);
   assert(bind_is_in('f', bindings));
   assert(
-      ast_is_equal(bind_get('f', bindings), get_root(expr)->lchild, tok_cmp));
+      ast_is_equal(bind_get('f', bindings), get_root(expr)->lchild, tok_is_equal));
 
   expr_destroy(pattern);
   expr_destroy(expr);
@@ -109,8 +109,8 @@ void test_match_apply(void) {
 
   match_apply(get_root(expr), &ctx);
   assert(ctx.changed = 1);
-  assert(ast_is_equal(get_root(expr), get_root(expected), tok_cmp));
-  assert(ast_is_equal(get_root(expected), get_root(expr), tok_cmp));
+  assert(ast_is_equal(get_root(expr), get_root(expected), tok_is_equal));
+  assert(ast_is_equal(get_root(expected), get_root(expr), tok_is_equal));
 
   expr_destroy(expr);
   expr_destroy(expected);
@@ -120,7 +120,7 @@ void test_match_apply(void) {
   ctx.ctx_trans = rules + 1;
 
   match_apply(get_root(expr)->lchild, &ctx);
-  assert(ast_is_equal(get_root(expr), get_root(expected), tok_cmp));
+  assert(ast_is_equal(get_root(expr), get_root(expected), tok_is_equal));
 
   expr_destroy(expr);
   expr_destroy(expected);

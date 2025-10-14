@@ -169,7 +169,7 @@ static int patt_match(const Ast_Node *patt, Ast_Node *node, BindMap *bindings) {
 
       /* Check if variable already bound, and if bound AST differs from node */
       if (bind_is_in(T_VAR(patt), bindings)) {
-        return ast_is_equal(bind_get(T_VAR(patt), bindings), node, tok_cmp);
+        return ast_is_equal(bind_get(T_VAR(patt), bindings), node, tok_is_equal);
       } else {
         bind_add(T_VAR(patt), node, bindings);
         return 1;

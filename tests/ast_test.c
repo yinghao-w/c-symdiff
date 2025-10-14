@@ -9,14 +9,14 @@ void opr_set_setup(void) { opr_set_init(); }
 
 #define ASSERT_TOKEN_EQUAL(token1, token2)                                     \
   do {                                                                         \
-    if (!tok_cmp(token1, token2)) {                                            \
+    if (!tok_is_equal(token1, token2)) {                                       \
       printf("Assertion failed: %s == %s\n", #token1, #token2);                \
       printf("In file %s, function %s, line %d\n", __FILE__, __func__,         \
              __LINE__);                                                        \
       printf("%s: ", #token1);                                                 \
-      token_print(token1);                                                     \
+      tok_print(token1);                                                       \
       printf("\n%s: ", #token2);                                               \
-      token_print(token2);                                                     \
+      tok_print(token2);                                                       \
       printf("\n");                                                            \
       abort();                                                                 \
     }                                                                          \
@@ -72,57 +72,61 @@ void test_exprs_setup(void) {
           (Token){SCALAR, {2.0}},
           rp,
       },
-      ast_join(dummy, ast_join(mul,
+      ast_join(dummy,
+               ast_join(mul,
 
-               ast_leaf((Token){SCALAR, {3.0}}),
+                        ast_leaf((Token){SCALAR, {3.0}}),
 
-               ast_join(add,
+                        ast_join(add,
 
-                        ast_leaf(x),
+                                 ast_leaf(x),
 
-                        ast_leaf((Token){SCALAR, {2.0}})
+                                 ast_leaf((Token){SCALAR, {2.0}})
 
-                            )
+                                     )
 
-                   ), NULL)
+                            ),
+               NULL)
 
   };
 
-  test_exprs_all[1] =
-      (struct test_exprs_formats){"1.5/ (b + @( c ))",
-                                  {
-                                      (Token){SCALAR, {1.5}},
-                                      divi,
-                                      lp,
-                                      b,
-                                      add,
-                                      exp,
-                                      lp,
-                                      c,
-                                      rp,
-                                      rp,
-                                  },
-                          ast_join(dummy,        ast_join(divi,
+  test_exprs_all[1] = (struct test_exprs_formats){
+      "1.5/ (b + @( c ))",
+      {
+          (Token){SCALAR, {1.5}},
+          divi,
+          lp,
+          b,
+          add,
+          exp,
+          lp,
+          c,
+          rp,
+          rp,
+      },
+      ast_join(dummy,
+               ast_join(divi,
 
-                                           ast_leaf((Token){SCALAR, {1.5}}),
+                        ast_leaf((Token){SCALAR, {1.5}}),
 
-                                           ast_join(add,
+                        ast_join(add,
 
-                                                    ast_leaf(b),
+                                 ast_leaf(b),
 
-                                                    ast_join(exp,
+                                 ast_join(exp,
 
-                                                             ast_leaf(c),
+                                          ast_leaf(c),
 
-                                                             NULL
+                                          NULL
 
-                                                             )
+                                          )
 
-                                                        )
+                                     )
 
-                                               ), NULL)
+                            ),
+               NULL)
 
-      };
+  };
 
   test_exprs_all[2] = (struct test_exprs_formats){
       "@ x - -7.8 * x",
@@ -134,21 +138,23 @@ void test_exprs_setup(void) {
           mul,
           x,
       },
-ast_join(dummy,      ast_join(sub,
+      ast_join(dummy,
+               ast_join(sub,
 
-               ast_join(exp,
+                        ast_join(exp,
 
-                        ast_leaf(x), NULL),
+                                 ast_leaf(x), NULL),
 
-               ast_join(mul,
+                        ast_join(mul,
 
-                        ast_leaf((Token){SCALAR, {-7.8}}),
+                                 ast_leaf((Token){SCALAR, {-7.8}}),
 
-                        ast_leaf(x)
+                                 ast_leaf(x)
 
-                            )
+                                     )
 
-                   ), NULL)
+                            ),
+               NULL)
 
   };
 }
@@ -203,7 +209,7 @@ void test_shunting_yard(void) {
   for (int i = 0; i < NUM_EXPRS; i++) {
     Ast_Node *expr = shunting_yard(lexer(test_exprs_all[i].s));
     Ast_Node *expected = test_exprs_all[i].tree->lchild;
-    assert(ast_is_equal(expr, expected, tok_cmp));
+    assert(ast_is_equal(expr, expected, tok_is_equal));
     ast_destroy(expr);
   }
 
@@ -225,8 +231,8 @@ void test_ast_copy(void) {
   for (int i = 0; i < NUM_EXPRS; i++) {
     Ast_Node *original = test_exprs_all[i].tree;
     Ast_Node *copy = ast_copy(original);
-    assert(ast_is_equal(copy, original, tok_cmp));
-	ast_destroy(copy);
+    assert(ast_is_equal(copy, original, tok_is_equal));
+    ast_destroy(copy);
   }
 
   printf("%s passed\n", __func__);

@@ -38,6 +38,10 @@ void opr_set_init(void) {
   // op_add('c', (Opr){"cos", 1, 4, cosi}, opr_set);
 }
 
+void opr_set_cleanup(void) {
+	op_destroy(opr_set);
+}
+
 Opr *opr_get(const char s) { return op_addr(s, opr_set); }
 
 int opr_cmp(const Opr *opr1, const Opr *opr2) {
@@ -50,26 +54,26 @@ int opr_cmp(const Opr *opr1, const Opr *opr2) {
   }
 }
 
-int tok_cmp(Token t1, Token t2) {
-  if (t1.token_type != t2.token_type) {
+int tok_is_equal(Token token1, Token token2) {
+  if (token1.token_type != token2.token_type) {
     return 0;
   } else {
-    switch (t1.token_type) {
+    switch (token1.token_type) {
     case SCALAR:
       /* TODO: add epsilon difference */
-      return t1.scalar == t2.scalar;
+      return token1.scalar == token2.scalar;
       break;
     case VAR:
-      return t1.var == t2.var;
+      return token1.var == token2.var;
       break;
     case OPR:
-      return t1.opr == t2.opr;
+      return token1.opr == token2.opr;
       break;
     }
   }
 }
 
-void token_print(Token token) {
+void tok_print(Token token) {
   switch (token.token_type) {
   case SCALAR:
     printf("%.2f", token.scalar);

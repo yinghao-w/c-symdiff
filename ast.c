@@ -98,7 +98,7 @@ void set_root(Ast_Node *root, Expression expr) {
 }
 
 int expr_is_equal(Expression expr1, Expression expr2) {
-  return ast_is_equal(expr1.dummy_parent, expr2.dummy_parent, tok_cmp);
+  return ast_is_equal(expr1.dummy_parent, expr2.dummy_parent, tok_is_equal);
 }
 
 Ast_Node *ast_copy(Ast_Node *root) {
