@@ -12,6 +12,10 @@
 #define T_STRUCT_PREFIX Ast
 #include "tree.h"
 
+/* ------------- *
+ * HELPER MACROS *
+ * ------------- */
+
 #define T_TYPE(node) (node->value.token_type)
 #define T_SCALAR(node) (node->value.scalar)
 #define T_VAR(node) (node->value.var)
@@ -21,6 +25,10 @@
 #define T_IS_VAR(node) (T_TYPE(node) == VAR)
 #define T_IS_OPR(node) (T_TYPE(node) == OPR)
 #define fp_peek(darray) darray[fp_length(darray) - 1]
+
+/* ------------ *
+ * AST BUILDING *
+ * ------------ */
 
 /* Takes an operator and builds a tree node with value operator, and arity
  * number of children from the top of the out stack. Pushes the new node onto
@@ -93,36 +101,9 @@ static Ast_Node *shunting_yard(Token tokens[]) {
   return root;
 }
 
-struct Expression {
-  Ast_Node *dummy_parent;
-};
-
-Expression expr_create(char input[]) {
-  // Expression *p = malloc(sizeof(*p));
-  Ast_Node *ast_tree = shunting_yard(lexer(input));
-
-  /* Give the AST root a dummy parent to simplify tree modification functions */
-  Token token;
-  token.token_type = VAR;
-  token.var = '#';
-  // p->dummy_parent = ast_join(token, ast_tree, NULL);
-
-  // return *p;
-  Expression expr = {ast_join(token, ast_tree, NULL)};
-  return expr;
-}
-
-void expr_destroy(Expression expr) { ast_destroy(expr.dummy_parent); }
-
-Ast_Node *get_root(Expression expr) { return expr.dummy_parent->lchild; }
-void set_root(Ast_Node *root, Expression expr) {
-  ast_detach(expr.dummy_parent->lchild);
-  ast_attach(root, expr.dummy_parent);
-}
-
-int expr_is_equal(Expression expr1, Expression expr2) {
-  return ast_is_equal(expr1.dummy_parent, expr2.dummy_parent, tok_is_equal);
-}
+/* ------------------- *
+ * EXTRA AST FUNCTIONS *
+ * ------------------- */
 
 Ast_Node *ast_copy(Ast_Node *root) {
   Ast_Node *copy_root = ast_leaf(root->value);
@@ -155,11 +136,6 @@ Ast_Node *ast_copy(Ast_Node *root) {
   return copy_root;
 }
 
-Expression expr_copy(Expression expr) {
-  Ast_Node *dummy_copy = ast_copy(expr.dummy_parent);
-  return (Expression){dummy_copy};
-}
-
 void ast_overwrite(Ast_Node *old, Ast_Node *new) {
   if (new->parent) {
     ast_detach(new);
@@ -190,20 +166,87 @@ void ast_overwrite(Ast_Node *old, Ast_Node *new) {
   ast_destroy(new);
 }
 
-/* ------------- *
- * HELPER MACROS *
- * ------------- */
+void recursive_print(Ast_Node *node) {
+  if (ast_is_leaf(node)) {
+    printf(" ");
+    tok_print(node->value);
+    printf(" ");
+    return;
+  }
 
-#define T_TYPE(node) (node->value.token_type)
-#define T_SCALAR(node) (node->value.scalar)
-#define T_VAR(node) (node->value.var)
-#define T_OPR(node) (node->value.opr)
+  printf("(");
+  if (node->lchild) {
+    recursive_print(node->lchild);
+  }
+  printf(" ");
+  tok_print(node->value);
+  printf(" ");
+  if (node->rchild) {
+    recursive_print(node->rchild);
+  }
+  printf(")");
+}
 
-#define T_IS_SCALAR(node) (T_TYPE(node) == SCALAR)
-#define T_IS_VAR(node) (T_TYPE(node) == VAR)
-#define T_IS_OPR(node) (T_TYPE(node) == OPR)
+/* Rotate the subtree rooted at node counter-clockwise. Does not check for
+ * existence of the right child. */
+void ast_rotate_ccw(Ast_Node *node) {
 
-#define NAME_LENGTH 16
+  Ast_Node *new_top = node->rchild;
+  Ast_Node *new_l_l = node->lchild;
+  Ast_Node *new_l_r = NULL;
+  if (new_top->lchild) {
+    new_l_r = new_top->lchild;
+    ast_detach(new_l_r);
+  }
+  ast_detach(new_l_l);
+  ast_detach(new_top);
+
+  /* If overwrite then attach, then during the overwrite, if new_top only has a
+   * rchild, it will be attached to the lchild side of node. So we ensure
+   * new_top has an lchild first. Function only used to with commutative
+   * operator nodes, so non-issue, but wary for potential reuse. */
+  Ast_Node *new_lchild = ast_join(node->value, new_l_l, new_l_r);
+  ast_attach(new_lchild, new_top);
+  ast_overwrite(node, new_top);
+}
+
+/* -------------------- *
+ * EXPRESSION STRUCTURE *
+ * -------------------- */
+
+struct Expression {
+  Ast_Node *dummy_parent;
+};
+
+Expression expr_create(char input[]) {
+  // Expression *p = malloc(sizeof(*p));
+  Ast_Node *ast_tree = shunting_yard(lexer(input));
+
+  /* Give the AST root a dummy parent to simplify tree modification functions */
+  Token token;
+  token.token_type = VAR;
+  token.var = '#';
+  // p->dummy_parent = ast_join(token, ast_tree, NULL);
+
+  // return *p;
+  Expression expr = {ast_join(token, ast_tree, NULL)};
+  return expr;
+}
+
+void expr_destroy(Expression expr) { ast_destroy(expr.dummy_parent); }
+
+Ast_Node *get_root(Expression expr) { return expr.dummy_parent->lchild; }
+
+int expr_is_equal(Expression expr1, Expression expr2) {
+  return ast_is_equal(expr1.dummy_parent, expr2.dummy_parent, tok_is_equal);
+}
+
+Expression expr_copy(Expression expr) {
+  Ast_Node *dummy_copy = ast_copy(expr.dummy_parent);
+  return (Expression){dummy_copy};
+}
+
+void expr_print(Expression expr) { recursive_print(get_root(expr)); }
 
 /* ---------------------------------------- *
  * EVALUATION AND SIMPLIFICATION TRANSFORMS *
@@ -245,6 +288,8 @@ void eval_apply(Ast_Node *node, void *ctx) {
   }
 }
 
+#define NAME_LENGTH 16
+
 struct Simpl {
   char name[NAME_LENGTH];
   Opr *opr;
@@ -280,6 +325,20 @@ void ann_apply(Ast_Node *node, void *ctx) {
       ctx_all->changed = 1;
     } else if (T_IS_SCALAR(node->rchild) && T_SCALAR(node->rchild) == ann) {
       ast_overwrite(node, node->rchild);
+      ctx_all->changed = 1;
+    }
+  }
+}
+
+/* If node and its right child are the same associative operator, rotates the
+ * subtree counter-clockwise, i.e. changes a + (b + c) to (a + b) + c. */
+void assoc_apply(Ast_Node *node, void *ctx) {
+  struct CtxAll *ctx_all = ctx;
+  Opr *opr = ctx_all->ctx_trans;
+
+  if (T_IS_OPR(node) && T_OPR(node) == opr) {
+    if (T_IS_OPR(node->rchild) && T_OPR(node->rchild) == opr) {
+      ast_rotate_ccw(node);
       ctx_all->changed = 1;
     }
   }
@@ -510,6 +569,8 @@ int norm_apply(Expression expr) {
     }
 
     curr_changed |= expr_it_apply(expr, T_POST, eval_apply, NULL);
+	curr_changed |= expr_it_apply(expr, T_PRE, assoc_apply, opr_get("+"));
+	curr_changed |= expr_it_apply(expr, T_PRE, assoc_apply, opr_get("*"));
 
     changed |= curr_changed;
     if (!curr_changed) {
@@ -536,26 +597,3 @@ int diff_apply(Expression expr) {
   }
   return changed;
 }
-
-void recursive_print(Ast_Node *node) {
-  if (ast_is_leaf(node)) {
-    printf(" ");
-    tok_print(node->value);
-    printf(" ");
-    return;
-  }
-
-  printf("(");
-  if (node->lchild) {
-    recursive_print(node->lchild);
-  }
-  printf(" ");
-  tok_print(node->value);
-  printf(" ");
-  if (node->rchild) {
-    recursive_print(node->rchild);
-  }
-  printf(")");
-}
-
-void expr_print(Expression expr) { recursive_print(get_root(expr)); }

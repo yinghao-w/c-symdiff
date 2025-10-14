@@ -1,5 +1,6 @@
 #define T_DEBUG
 #define SYMBOLS_DEBUG
+
 #include "ast.c"
 #include "lexer.h"
 #include "symbols.h"
@@ -239,6 +240,18 @@ void test_ast_copy(void) {
   printf("%s passed\n", __func__);
 }
 
+void test_ast_rotate_ccw(void) {
+  Expression expr = expr_create("3 * (x  + 2)");
+  Expression expected = expr_create("(3 * x) + 2");
+
+  ast_rotate_ccw(get_root(expr));
+  assert(expr_is_equal(expr, expected));
+
+  expr_destroy(expr);
+  expr_destroy(expected);
+  printf("%s passed\n", __func__);
+}
+
 void test_eval_apply(void) {
   Expression expr1 = expr_create("4 - 9");
   Expression expr2 = expr_create("2 / 3.9 - 4");
@@ -307,6 +320,19 @@ void test_ann_apply(void) {
   printf("%s passed\n", __func__);
 }
 
+void test_assoc_apply(void) {
+  Expression expr = expr_create("3 + (x + exp y)");
+  Expression expected = expr_create("3 + x + exp y");
+  struct CtxAll add_assoc_ctx = {0, opr_get("+")};
+
+  assoc_apply(get_root(expr), &add_assoc_ctx);
+  assert(expr_is_equal(expr, expected));
+
+  expr_destroy(expr);
+  expr_destroy(expected);
+  printf("%s passed\n", __func__);
+}
+
 void test_var_match(void) {
   Expression expr = expr_create("3 ^ y");
 
@@ -363,7 +389,7 @@ void test_match_apply(void) {
 
 void test_norm_apply(void) {
   Expression expr = expr_create("1 - b/c");
-  Expression expected = expr_create("1 + -1 * (b * c ^ -1)");
+  Expression expected = expr_create("1 + -1 * b * c ^ -1");
 
   assert(norm_apply(expr));
   assert(expr_is_equal(expr, expected));
@@ -384,6 +410,7 @@ void run_tests(void) {
   test_expr_is_equal();
   test_tok_cmp();
   test_ast_copy();
+  test_ast_rotate_ccw();
 
   test_exprs_teardown();
 
@@ -393,6 +420,7 @@ void run_tests(void) {
 
   test_id_apply();
   test_ann_apply();
+  test_assoc_apply();
 
   rules_init();
 
