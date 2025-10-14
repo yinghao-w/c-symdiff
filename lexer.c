@@ -114,7 +114,7 @@ static MATCH_CODE match(char *remainder[], Token *token) {
  * 2 x -> 2 * x */
 Token *mul_insert(Token tokens[]) {
   for (size_t i = 1; i < fp_length(tokens); i++) {
-    if (tokens[i - 1].token_type != OPR && tokens[i].token_type != OPR) {
+    if (tokens[i - 1].token_type != OPR && tokens[i].token_type == VAR) {
       Token mul = {.token_type = OPR};
       mul.opr = opr_get('*');
       fp_insert(mul, i, tokens);
