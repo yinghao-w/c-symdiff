@@ -2,8 +2,10 @@
 
 #define SYMBOLS_H
 
+#define REPR_LENGTH 4
+
 typedef struct {
-  char repr[4];
+  char repr[REPR_LENGTH];
   int arity;
   int precedence;
   float (*func)(float *args);
@@ -12,7 +14,7 @@ typedef struct {
 /* Initialise and cleanup global operator definitions. */
 void opr_set_init(void);
 void opr_set_cleanup(void);
-Opr *opr_get(const char s);
+Opr *opr_get(const char s[]);
 
 /* Return 1 if opr1 is higher precedence than opr2, -1 if opr is lower
  * precedence, and 0 if equal, i.e. >  */

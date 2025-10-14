@@ -31,10 +31,11 @@ void test_var_match(void) {
 }
 
 void test_opr_match(void) {
-  char s[] = "(je2";
+  char s[] = "(jsin";
   assert(opr_match(s, s + 1));
   assert(!opr_match(s, s + 2));
-  assert(!opr_match(s + 1, s + 2));
+  assert(!opr_match(s + 2, s + 4));
+  assert(opr_match(s + 2, s + 5));
 
   printf("%s passed\n", __func__);
 }
@@ -57,7 +58,7 @@ void test_match(void) {
   t = s3;
   assert(match(&t, &token) == 0);
   assert(token.token_type == OPR);
-  assert(token.opr = opr_get('*'));
+  assert(token.opr = opr_get("*"));
 
   char s4[] = ":99.a";
   t = s4;
@@ -81,7 +82,7 @@ void test_mul_insert(void) {
   mul_insert(tokens);
   assert(fp_length(tokens) == 3);
   assert(tokens[1].token_type == OPR);
-  assert(tokens[1].opr == opr_get('*'));
+  assert(tokens[1].opr == opr_get("*"));
 
   fp_destroy(tokens);
   printf("%s passed\n", __func__);
@@ -96,10 +97,11 @@ void test_lexer(void) {
   assert(tokens[4].var = 'x');
   fp_destroy(tokens);
 
-  tokens = lexer("x y - 11");
-  assert(fp_length(tokens) == 5);
+  tokens = lexer("x y - sin 11");
+  assert(fp_length(tokens) == 6);
   assert(tokens[1].token_type == OPR);
-  assert(tokens[4].scalar == 11);
+  assert(tokens[4].opr->precedence == 4);
+  assert(tokens[5].scalar == 11);
   fp_destroy(tokens);
 
   printf("%s passed\n", __func__);

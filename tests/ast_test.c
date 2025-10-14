@@ -24,19 +24,19 @@ void opr_set_setup(void) { opr_set_init(); }
 
 #define VAR_OPR_TOKENS_SETUP()                                                 \
   Token add = {.token_type = OPR};                                             \
-  add.opr = opr_get('+');                                                      \
+  add.opr = opr_get("+");                                                      \
   Token sub = {.token_type = OPR};                                             \
-  sub.opr = opr_get('-');                                                      \
+  sub.opr = opr_get("-");                                                      \
   Token mul = {.token_type = OPR};                                             \
-  mul.opr = opr_get('*');                                                      \
+  mul.opr = opr_get("*");                                                      \
   Token divi = {.token_type = OPR};                                            \
-  divi.opr = opr_get('/');                                                     \
+  divi.opr = opr_get("/");                                                     \
   Token exp = {.token_type = OPR};                                             \
-  exp.opr = opr_get('@');                                                      \
+  exp.opr = opr_get("@");                                                      \
   Token lp = {.token_type = OPR};                                              \
-  lp.opr = opr_get('(');                                                       \
+  lp.opr = opr_get("(");                                                       \
   Token rp = {.token_type = OPR};                                              \
-  rp.opr = opr_get(')');                                                       \
+  rp.opr = opr_get(")");                                                       \
                                                                                \
   Token x = {.token_type = VAR};                                               \
   x.var = 'x';                                                                 \

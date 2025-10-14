@@ -35,11 +35,22 @@ static int var_match(const char *restrict s0, const char *restrict s1) {
   return 1;
 }
 
+    /* Copy the string subset to s, '\0' padded to the right if necessary, to
+     * ensure opr_get can access all REPR_LENGTH many chars if required. */
+    /* TODO: rephrase this */
+static Opr *opr_sec_get(const char *restrict s0, const char *restrict s1){
+	char padded[REPR_LENGTH];
+	memset(padded, 0, 4);
+	memcpy(padded, s0, s1 - s0);
+	return opr_get(padded);
+
+}
+
 static int opr_match(const char *restrict s0, const char *restrict s1) {
-  if (s1 - s0 > 1) {
+  if (s1 - s0 > REPR_LENGTH) {
     return 0;
   } else {
-    return !!opr_get(*s0);
+	  return !!opr_sec_get(s0, s1);
   }
 }
 
@@ -49,15 +60,14 @@ static void l_strip(char *remainder[]) {
   }
 }
 
-
 /* Returns the atof of the string section between s0 and s1 only. In case
  * *remainder is a rvalue, copies the matched section into a temporary buffer,
  * and null terminates that section so atof scans that section only. */
 static float sec_atof(const char *restrict s0, const char *restrict s1) {
-	char temp[s1 - s0 + 1];
-	strncpy(temp, s0, s1 - s0);
-	temp[s1 - s0] = '\0';
-	return atof(temp);
+  char temp[s1 - s0 + 1];
+  strncpy(temp, s0, s1 - s0);
+  temp[s1 - s0] = '\0';
+  return atof(temp);
 }
 
 typedef enum {
@@ -96,13 +106,13 @@ static MATCH_CODE match(char *remainder[], Token *token) {
 
     switch (best_type) {
     case SCALAR:
-	  token->scalar = sec_atof(start, best);
+      token->scalar = sec_atof(start, best);
       break;
     case VAR:
       token->var = *start;
       break;
     case OPR:
-      token->opr = opr_get(*start);
+      token->opr = opr_sec_get(start, best);
       break;
     }
     *remainder = best;
@@ -116,7 +126,7 @@ Token *mul_insert(Token tokens[]) {
   for (size_t i = 1; i < fp_length(tokens); i++) {
     if (tokens[i - 1].token_type != OPR && tokens[i].token_type == VAR) {
       Token mul = {.token_type = OPR};
-      mul.opr = opr_get('*');
+      mul.opr = opr_get("*");
       fp_insert(mul, i, tokens);
     }
   }

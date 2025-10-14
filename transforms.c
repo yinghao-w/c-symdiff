@@ -291,9 +291,9 @@ static struct Simpl simpl_make(const char name[], Opr *opr, Scalar x) {
 }
 
 void simpls_init(void) {
-  fp_push(simpl_make("add id", opr_get('+'), 0), simpls);
-  fp_push(simpl_make("mul id", opr_get('*'), 1), simpls);
-  fp_push(simpl_make("mul ann", opr_get('*'), 0), simpls);
+  fp_push(simpl_make("add id", opr_get("+"), 0), simpls);
+  fp_push(simpl_make("mul id", opr_get("*"), 1), simpls);
+  fp_push(simpl_make("mul ann", opr_get("*"), 0), simpls);
 }
 
 void rules_init(void) {
@@ -314,6 +314,8 @@ void diff_rules_init(void) {
   fp_push(rule_make("power rule", "x'(f ^ c)", "c * f ^ (c - 1) * x'f"),
           diff_rules);
   fp_push(rule_make("exp rule", "x'(@ f)", "@ f * x'f"), diff_rules);
+  fp_push(rule_make("sine rule", "x'(sin f)", "cos f * x'f"), diff_rules);
+  fp_push(rule_make("cosine rule", "x'(cos f)", "-1 * sin f * x'f"), diff_rules);
 }
 
 /* --------------------- *

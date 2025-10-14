@@ -1,6 +1,7 @@
 #include "symbols.h"
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 
 #define DPX_KT char
 #define DPX_VT Opr
@@ -35,14 +36,21 @@ void opr_set_init(void) {
   op_add(')', (Opr){")", 0, 0, NULL}, opr_set);
 
   op_add('s', (Opr){"sin", 1, 4, sine}, opr_set);
-  // op_add('c', (Opr){"cos", 1, 4, cosi}, opr_set);
+  op_add('c', (Opr){"cos", 1, 4, cosi}, opr_set);
 }
 
-void opr_set_cleanup(void) {
-	op_destroy(opr_set);
-}
+void opr_set_cleanup(void) { op_destroy(opr_set); }
 
-Opr *opr_get(const char s) { return op_addr(s, opr_set); }
+Opr *opr_get(const char s[]) {
+  Opr *opr = op_addr(s[0], opr_set);
+  if (!opr) {
+    return NULL;
+  } else if (!strncmp(s, opr->repr, REPR_LENGTH)) {
+    return opr;
+  } else {
+    return NULL;
+  }
+}
 
 int opr_cmp(const Opr *opr1, const Opr *opr2) {
   if (opr1->precedence > opr2->precedence) {
@@ -82,7 +90,7 @@ void tok_print(Token token) {
     printf("%c", token.var);
     break;
   case OPR:
-    printf("%c", token.opr->repr[0]);
+    printf("%s", token.opr->repr);
     break;
   }
 }
