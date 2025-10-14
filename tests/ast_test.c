@@ -239,8 +239,6 @@ void test_ast_copy(void) {
   printf("%s passed\n", __func__);
 }
 
-
-
 void test_eval_apply(void) {
   Expression expr1 = expr_create("4 - 9");
   Expression expr2 = expr_create("2 / 3.9 - 4");
@@ -389,7 +387,6 @@ void run_tests(void) {
 
   test_exprs_teardown();
 
-
   test_eval_apply();
 
   simpls_init();
@@ -403,7 +400,6 @@ void run_tests(void) {
   test_match();
   test_match_apply();
   test_norm_apply();
-
 }
 
 int main(void) {

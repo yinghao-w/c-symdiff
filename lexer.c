@@ -1,6 +1,6 @@
 #include "lexer.h"
-#include "string.h"
 #include "../c-generics/fat_pointer.h"
+#include "string.h"
 #include "symbols.h"
 #include <ctype.h>
 #include <stdio.h>
@@ -35,22 +35,21 @@ static int var_match(const char *restrict s0, const char *restrict s1) {
   return 1;
 }
 
-    /* Copy the string subset to s, '\0' padded to the right if necessary, to
-     * ensure opr_get can access all REPR_LENGTH many chars if required. */
-    /* TODO: rephrase this */
-static Opr *opr_sec_get(const char *restrict s0, const char *restrict s1){
-	char padded[REPR_LENGTH];
-	memset(padded, 0, 4);
-	memcpy(padded, s0, s1 - s0);
-	return opr_get(padded);
-
+/* Copy the string subset to s, '\0' padded to the right if necessary, to
+ * ensure opr_get can access all REPR_LENGTH many chars if required. */
+/* TODO: rephrase this */
+static Opr *opr_sec_get(const char *restrict s0, const char *restrict s1) {
+  char padded[REPR_LENGTH];
+  memset(padded, 0, 4);
+  memcpy(padded, s0, s1 - s0);
+  return opr_get(padded);
 }
 
 static int opr_match(const char *restrict s0, const char *restrict s1) {
   if (s1 - s0 > REPR_LENGTH) {
     return 0;
   } else {
-	  return !!opr_sec_get(s0, s1);
+    return !!opr_sec_get(s0, s1);
   }
 }
 

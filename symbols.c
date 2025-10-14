@@ -39,7 +39,6 @@ void opr_set_init(void) {
   op_add('\'', (Opr){"\'", 2, 5, NULL}, opr_set);
   op_add('(', (Opr){"(", 0, 0, NULL}, opr_set);
   op_add(')', (Opr){")", 0, 0, NULL}, opr_set);
-
 }
 
 void opr_set_cleanup(void) { op_destroy(opr_set); }

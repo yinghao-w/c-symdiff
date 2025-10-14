@@ -24,8 +24,8 @@
  *
  * 		i_destroy(root);
  *
- * 	Attach or detach a node to or from its parent, setting respective parent and
- * 	child pointers:
+ * 	Attach or detach a node to or from its parent, setting respective parent
+ * and child pointers:
  *
  * 		i_detach(node);
  *
