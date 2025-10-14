@@ -301,7 +301,12 @@ void rules_init(void) {
   fp_push(rule_make("- to +", "f - g", "f + -1 * g"), rules);
   fp_push(rule_make("/ to *", "f / g", "f * g ^ -1"), rules);
   fp_push(rule_make("x+x = 2*x", "f + f", "2 * f"), rules);
+  fp_push(rule_make("x*x = x^2", "f * f", "f ^ 2"), rules);
   fp_push(rule_make("x^1 = x", "f ^ 1", "f"), rules);
+  fp_push(rule_make("x^y^z = x^yz", "(f ^ g) ^ h", "f ^ (g * h)"), rules);
+  /* TODO: Add separate transform for inverses */
+  fp_push(rule_make("exp log = id", "exp log f", "f"), rules);
+  fp_push(rule_make("log exp = id", "log exp f", "f"), rules);
 }
 
 void diff_rules_init(void) {

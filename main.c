@@ -1,7 +1,5 @@
 #define T_DEBUG
 #define SYMBOLS_DEBUG
-#include "ast.h"
-#include "symbols.h"
 #include "transforms.h"
 #include <stdio.h>
 
