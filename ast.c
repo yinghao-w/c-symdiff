@@ -105,7 +105,7 @@ static Ast_Node *shunting_yard(Token tokens[]) {
  * EXTRA AST FUNCTIONS *
  * ------------------- */
 
-Ast_Node *ast_copy(Ast_Node *root) {
+static Ast_Node *ast_copy(Ast_Node *root) {
   Ast_Node *copy_root = ast_leaf(root->value);
   Ast_Iter *it1 = ast_iter_create(root, T_PRE);
   Ast_Iter *it2 = ast_iter_create(copy_root, T_PRE);
@@ -136,7 +136,7 @@ Ast_Node *ast_copy(Ast_Node *root) {
   return copy_root;
 }
 
-void ast_overwrite(Ast_Node *old, Ast_Node *new) {
+static void ast_overwrite(Ast_Node *old, Ast_Node *new) {
   if (new->parent) {
     ast_detach(new);
   }
@@ -166,7 +166,7 @@ void ast_overwrite(Ast_Node *old, Ast_Node *new) {
   ast_destroy(new);
 }
 
-void recursive_print(Ast_Node *node) {
+static void recursive_print(Ast_Node *node) {
   if (ast_is_leaf(node)) {
     printf(" ");
     tok_print(node->value);
@@ -189,7 +189,7 @@ void recursive_print(Ast_Node *node) {
 
 /* Rotate the subtree rooted at node counter-clockwise. Does not check for
  * existence of the right child. */
-void ast_rotate_ccw(Ast_Node *node) {
+static void ast_rotate_ccw(Ast_Node *node) {
 
   Ast_Node *new_top = node->rchild;
   Ast_Node *new_l_l = node->lchild;
@@ -208,6 +208,30 @@ void ast_rotate_ccw(Ast_Node *node) {
   Ast_Node *new_lchild = ast_join(node->value, new_l_l, new_l_r);
   ast_attach(new_lchild, new_top);
   ast_overwrite(node, new_top);
+}
+
+static void ast_reflect(Ast_Node *node) {
+	Ast_Node *new_lchild = node->rchild;
+	Ast_Node *new_rchild = node->lchild;
+	if (new_lchild) {
+		ast_detach(new_lchild);
+	}
+	if (new_rchild) {
+		ast_detach(new_rchild);
+	}
+	ast_attach(new_lchild, node);
+	ast_attach(new_rchild, node);
+}
+
+static void ast_swap(Ast_Node *node1, Ast_Node *node2) {
+  Ast_Node *parent1 = node1->parent;
+  Ast_Node *parent2 = node2->parent;
+  ast_detach(node1);
+  ast_detach(node2);
+  /* Flipped attach order to detach ensures that nodes are swapped when they
+   * share a parent. */
+  ast_attach(node2, parent1);
+  ast_attach(node1, parent2);
 }
 
 /* -------------------- *
@@ -372,17 +396,6 @@ static int ast_cmp(Ast_Node *node1, Ast_Node *node2) {
   }
 }
 
-static void ast_swap(Ast_Node *node1, Ast_Node *node2) {
-  Ast_Node *parent1 = node1->parent;
-  Ast_Node *parent2 = node2->parent;
-  ast_detach(node1);
-  ast_detach(node2);
-  /* Flipped attach order to detach ensures that nodes are swapped when they
-   * share a parent. */
-  ast_attach(node2, parent1);
-  ast_attach(node1, parent2);
-}
-
 /* Exchange sort between the right child of node and the left child or left
  * child of left child. In essence a bubble sort pass. Becomes a bubble sort
  * when iteratively applied by expr_it_apply and norm_apply. */
@@ -412,17 +425,28 @@ static void order_apply(Ast_Node *node, void *ctx) {
 
 /* TODO: Implement whole bubble sort in one function. */
 static void order_2_apply(Ast_Node *root, void *ctx) {
+  // struct CtxAll *ctx_all = ctx;
+  // Opr *opr = ctx_all->ctx_trans;
+  //
+  // while (1) {
+  //   int swapped = 0;
+  //   while (1) {
+  //
+  //     ;
+  //   };
+  // }
+}
+
+static void qwe(Ast_Node *node, void *ctx) {
   struct CtxAll *ctx_all = ctx;
   Opr *opr = ctx_all->ctx_trans;
 
-  while (1) {
-    int swapped = 0;
-    while (1) {
+  if (T_IS_OPR(node) && T_OPR(node) == opr) {
+	  ;
 
-      ;
-    };
-  }
 }
+}
+
 
 /* --------------------------- *
  * PATTERN MATCHING TRANSFORMS *
@@ -485,7 +509,7 @@ static int patt_match(const Ast_Node *patt, Ast_Node *node, BindMap *bindings) {
 
 /* Attempts to match the entire pattern to the expression rooted at ast_expr.
  * Adds bindings if any to bindings. */
-int match(Ast_Node *pattern, Ast_Node *ast_expr, BindMap *bindings) {
+static int match(Ast_Node *pattern, Ast_Node *ast_expr, BindMap *bindings) {
   int matched = 1;
 
   Ast_Iter *it = ast_iter_create(pattern, T_PRE);
@@ -534,7 +558,7 @@ loop_exit:
   return matched;
 }
 
-void match_apply(Ast_Node *node, void *ctx) {
+static void match_apply(Ast_Node *node, void *ctx) {
   struct CtxAll *ctx_all = ctx;
   struct PatternRule *rule = ctx_all->ctx_trans;
   Ast_Node *pattern = get_root(rule->pattern);
@@ -564,8 +588,6 @@ void match_apply(Ast_Node *node, void *ctx) {
  * TRANSFORM INITIALISATION *
  * ------------------------ */
 
-#include "../c-generics/fat_pointer.h"
-
 struct Simpl *simpls = NULL;
 
 /* Normalisation rules to convert expression into more readily modified form. */
@@ -588,6 +610,7 @@ static struct PatternRule rule_inverse(struct PatternRule *rule) {
   struct PatternRule inverse_rule;
   strncpy(inverse_rule.name, "i_", 2);
   strncpy(inverse_rule.name + 2, rule->name, NAME_LENGTH - 2);
+  inverse_rule.name[NAME_LENGTH - 1] = '\0';
   inverse_rule.pattern = rule->replacement;
   inverse_rule.replacement = rule->pattern;
   return inverse_rule;
@@ -615,6 +638,7 @@ void norm_rules_init(void) {
   fp_push(rule_make("x+x = 2*x", "f + f", "2 * f"), norm_rules);
   fp_push(rule_make("x*x = x^2", "f * f", "f ^ 2"), norm_rules);
 
+  fp_push(rule_make("x^1 = x", "f ^ 1", "f"), norm_rules);
   fp_push(rule_make("x^y^z = x^yz", "(f ^ g) ^ h", "f ^ (g * h)"), norm_rules);
 
   fp_push(rule_make("factor left", "f * g + h * g", "(f + h) * g"), norm_rules);
@@ -629,23 +653,7 @@ void norm_rules_init(void) {
 }
 
 void denorm_rules_init(void) {
-  fp_push(rule_make("+ to -", "f - g", "f + -1 * g"), denorm_rules);
-  fp_push(rule_make("/ to *", "f / g", "f * g ^ -1"), denorm_rules);
-
-  fp_push(rule_make("x*x = x^2", "f * f", "f ^ 2"), denorm_rules);
-
-  fp_push(rule_make("x^1 = x", "f ^ 1", "f"), denorm_rules);
-  fp_push(rule_make("x^y^z = x^yz", "(f ^ g) ^ h", "f ^ (g * h)"),
-          denorm_rules);
-
-  fp_push(rule_make("factor left", "f * g + h * g", "(f + h) * g"),
-          denorm_rules);
-  fp_push(rule_make("factor right", "f * g + f * h", "f * (g + h)"),
-          denorm_rules);
-
-  fp_push(rule_make("power left", "f ^ g * h ^ g", "(f h) ^ g"), denorm_rules);
-  fp_push(rule_make("power right", "f ^ g * f ^ h", "f ^ (g + h)"),
-          denorm_rules);
+  fp_push(rule_inverse(norm_rules), denorm_rules);
 }
 
 void diff_rules_init(void) {
@@ -668,7 +676,7 @@ void diff_rules_init(void) {
  * RECURSIVE APPLICATION *
  * --------------------- */
 
-int expr_it_apply(Expression expr, ORDER order, void trans(Ast_Node *, void *),
+static int expr_it_apply(Expression expr, ORDER order, void trans(Ast_Node *, void *),
                   void *ctx_trans) {
   struct CtxAll ctx = {0, ctx_trans};
   ast_iter_apply(get_root(expr), order, trans, &ctx);
