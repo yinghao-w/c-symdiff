@@ -364,7 +364,7 @@ void test_match(void) {
 void test_match_apply(void) {
   Expression expr = expr_create("x - (exp x)");
   Expression expected = expr_create("x + (-1 * exp x)");
-  struct CtxAll ctx = {0, rules};
+  struct CtxAll ctx = {0, norm_rules};
 
   match_apply(get_root(expr), &ctx);
   assert(ctx.changed = 1);
@@ -376,7 +376,7 @@ void test_match_apply(void) {
 
   expr = expr_create("(a/b) + 0");
   expected = expr_create("a * b^(-1) + 0");
-  ctx.ctx_trans = rules + 1;
+  ctx.ctx_trans = norm_rules + 1;
 
   match_apply(get_root(expr)->lchild, &ctx);
   assert(ast_is_equal(get_root(expr), get_root(expected), tok_is_equal));
@@ -422,7 +422,7 @@ void run_tests(void) {
   test_ann_apply();
   test_assoc_apply();
 
-  rules_init();
+  norm_rules_init();
 
   test_var_match();
   test_match();

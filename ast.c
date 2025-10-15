@@ -257,7 +257,7 @@ struct CtxAll {
   void *ctx_trans;
 };
 
-void eval_apply(Ast_Node *node, void *ctx) {
+static void eval_apply(Ast_Node *node, void *ctx) {
   struct CtxAll *ctx_all = ctx;
 
   if (T_IS_OPR(node)) {
@@ -296,7 +296,7 @@ struct Simpl {
   Scalar x;
 };
 
-void id_apply(Ast_Node *node, void *ctx) {
+static void id_apply(Ast_Node *node, void *ctx) {
   struct CtxAll *ctx_all = ctx;
   struct Simpl *simpl = ctx_all->ctx_trans;
   Opr *opr = simpl->opr;
@@ -313,7 +313,7 @@ void id_apply(Ast_Node *node, void *ctx) {
   }
 }
 
-void ann_apply(Ast_Node *node, void *ctx) {
+static void ann_apply(Ast_Node *node, void *ctx) {
   struct CtxAll *ctx_all = ctx;
   struct Simpl *simpl = ctx_all->ctx_trans;
   Opr *opr = simpl->opr;
@@ -332,15 +332,95 @@ void ann_apply(Ast_Node *node, void *ctx) {
 
 /* If node and its right child are the same associative operator, rotates the
  * subtree counter-clockwise, i.e. changes a + (b + c) to (a + b) + c. */
-void assoc_apply(Ast_Node *node, void *ctx) {
+static void assoc_apply(Ast_Node *node, void *ctx) {
+  struct CtxAll *ctx_all = ctx;
+  Opr *opr = ctx_all->ctx_trans;
+
+  if (T_IS_OPR(node) && T_OPR(node) == opr && T_IS_OPR(node->rchild) &&
+      T_OPR(node->rchild) == opr) {
+    ast_rotate_ccw(node);
+    ctx_all->changed = 1;
+  }
+}
+
+/* Nodes ordered lowest-to-highest scalars, variables, operators. Scalars and
+ * variables are ordered as usual. Operators are first ordered by their initial
+ * character, then by the ordering of their left children. Returns 1 if
+ * node1 > node2, 0 otherwise. */
+static int ast_cmp(Ast_Node *node1, Ast_Node *node2) {
+  if (T_TYPE(node1) != T_TYPE(node2)) {
+    return T_TYPE(node1) > T_TYPE(node2);
+
+  } else {
+    switch (T_TYPE(node1)) {
+    case SCALAR:
+      return T_SCALAR(node1) > T_SCALAR(node2);
+      break;
+
+    case VAR:
+      return T_VAR(node1) > T_VAR(node2);
+      break;
+
+    case OPR:
+      if (T_OPR(node1) != T_OPR(node2)) {
+        return T_OPR(node1)->repr[0] > T_OPR(node2)->repr[0];
+      } else {
+        return ast_cmp(node1->lchild, node2->lchild);
+      }
+      break;
+    }
+  }
+}
+
+static void ast_swap(Ast_Node *node1, Ast_Node *node2) {
+  Ast_Node *parent1 = node1->parent;
+  Ast_Node *parent2 = node2->parent;
+  ast_detach(node1);
+  ast_detach(node2);
+  /* Flipped attach order to detach ensures that nodes are swapped when they
+   * share a parent. */
+  ast_attach(node2, parent1);
+  ast_attach(node1, parent2);
+}
+
+/* Exchange sort between the right child of node and the left child or left
+ * child of left child. In essence a bubble sort pass. Becomes a bubble sort
+ * when iteratively applied by expr_it_apply and norm_apply. */
+static void order_apply(Ast_Node *node, void *ctx) {
   struct CtxAll *ctx_all = ctx;
   Opr *opr = ctx_all->ctx_trans;
 
   if (T_IS_OPR(node) && T_OPR(node) == opr) {
-    if (T_IS_OPR(node->rchild) && T_OPR(node->rchild) == opr) {
-      ast_rotate_ccw(node);
-      ctx_all->changed = 1;
+
+    if (T_IS_OPR(node->lchild) && T_OPR(node->lchild) == opr) {
+
+      /* if the first node is greater than the second in the described order */
+      if (ast_cmp(node->lchild->rchild, node->rchild)) {
+        ast_swap(node->lchild->rchild, node->rchild);
+
+        ctx_all->changed = 1;
+      }
+    } else {
+      if (ast_cmp(node->lchild, node->rchild)) {
+        ast_swap(node->lchild, node->rchild);
+
+        ctx_all->changed = 1;
+      }
     }
+  }
+}
+
+/* TODO: Implement whole bubble sort in one function. */
+static void order_2_apply(Ast_Node *root, void *ctx) {
+  struct CtxAll *ctx_all = ctx;
+  Opr *opr = ctx_all->ctx_trans;
+
+  while (1) {
+    int swapped = 0;
+    while (1) {
+
+      ;
+    };
   }
 }
 
@@ -370,8 +450,8 @@ static int var_match(Var x, const Ast_Node *node) {
   }
 }
 
-/* Attempts to match the value of patt to the given node. If patt->value is a a
- * variable, binds it to the node and adds it to the list of bindings. */
+/* Attempts to match the value of patt to the given node. If patt->value is a
+ * a variable, binds it to the node and adds it to the list of bindings. */
 static int patt_match(const Ast_Node *patt, Ast_Node *node, BindMap *bindings) {
   switch (T_TYPE(patt)) {
 
@@ -382,7 +462,8 @@ static int patt_match(const Ast_Node *patt, Ast_Node *node, BindMap *bindings) {
   case VAR:
     if (var_match(T_VAR(patt), node)) {
 
-      /* Check if variable already bound, and if bound AST differs from node */
+      /* Check if variable already bound, and if bound AST differs from node
+       */
       if (bind_is_in(T_VAR(patt), bindings)) {
         return ast_is_equal(bind_get(T_VAR(patt), bindings), node,
                             tok_is_equal);
@@ -411,8 +492,8 @@ int match(Ast_Node *pattern, Ast_Node *ast_expr, BindMap *bindings) {
   Ast_Node *patt_node = ast_start(it);
   Ast_Node *expr_node = ast_expr;
 
-  /* Walks the pattern tree. Uses the direction of the pattern tree iterator to
-   * walk the expression tree. */
+  /* Walks the pattern tree. Uses the direction of the pattern tree iterator
+   * to walk the expression tree. */
   while (!ast_end(it)) {
     if (!patt_match(patt_node, expr_node, bindings)) {
       matched = 0;
@@ -441,8 +522,8 @@ int match(Ast_Node *pattern, Ast_Node *ast_expr, BindMap *bindings) {
 
     case LCHILD:
     case RCHILD:
-      /* Should not need to check for parent's existence; loop should end right
-       * after it->head returns to pattern root. */
+      /* Should not need to check for parent's existence; loop should end
+       * right after it->head returns to pattern root. */
       expr_node = expr_node->parent;
       break;
     }
@@ -486,7 +567,12 @@ void match_apply(Ast_Node *node, void *ctx) {
 #include "../c-generics/fat_pointer.h"
 
 struct Simpl *simpls = NULL;
-struct PatternRule *rules = NULL;
+
+/* Normalisation rules to convert expression into more readily modified form. */
+struct PatternRule *norm_rules = NULL;
+
+/* Denomralisation rules to convert expression into more human readable form. */
+struct PatternRule *denorm_rules = NULL;
 struct PatternRule *diff_rules = NULL;
 
 static struct PatternRule rule_make(const char name[], char pattern[],
@@ -496,6 +582,15 @@ static struct PatternRule rule_make(const char name[], char pattern[],
   rule.pattern = expr_create(pattern);
   rule.replacement = expr_create(replacement);
   return rule;
+}
+
+static struct PatternRule rule_inverse(struct PatternRule *rule) {
+  struct PatternRule inverse_rule;
+  strncpy(inverse_rule.name, "i_", 2);
+  strncpy(inverse_rule.name + 2, rule->name, NAME_LENGTH - 2);
+  inverse_rule.pattern = rule->replacement;
+  inverse_rule.replacement = rule->pattern;
+  return inverse_rule;
 }
 
 static struct Simpl simpl_make(const char name[], Opr *opr, Scalar x) {
@@ -512,17 +607,45 @@ void simpls_init(void) {
   fp_push(simpl_make("mul ann", opr_get("*"), 0), simpls);
 }
 
-void rules_init(void) {
+void norm_rules_init(void) {
 
-  fp_push(rule_make("- to +", "f - g", "f + -1 * g"), rules);
-  fp_push(rule_make("/ to *", "f / g", "f * g ^ -1"), rules);
-  fp_push(rule_make("x+x = 2*x", "f + f", "2 * f"), rules);
-  fp_push(rule_make("x*x = x^2", "f * f", "f ^ 2"), rules);
-  fp_push(rule_make("x^1 = x", "f ^ 1", "f"), rules);
-  fp_push(rule_make("x^y^z = x^yz", "(f ^ g) ^ h", "f ^ (g * h)"), rules);
+  fp_push(rule_make("- to +", "f - g", "f + -1 * g"), norm_rules);
+  fp_push(rule_make("/ to *", "f / g", "f * g ^ -1"), norm_rules);
+
+  fp_push(rule_make("x+x = 2*x", "f + f", "2 * f"), norm_rules);
+  fp_push(rule_make("x*x = x^2", "f * f", "f ^ 2"), norm_rules);
+
+  fp_push(rule_make("x^y^z = x^yz", "(f ^ g) ^ h", "f ^ (g * h)"), norm_rules);
+
+  fp_push(rule_make("factor left", "f * g + h * g", "(f + h) * g"), norm_rules);
+  fp_push(rule_make("factor right", "f * g + f * h", "f * (g + h)"),
+          norm_rules);
+
+  fp_push(rule_make("power left", "f ^ g * h ^ g", "(f h) ^ g"), norm_rules);
+  fp_push(rule_make("power right", "f ^ g * f ^ h", "f ^ (g + h)"), norm_rules);
   /* TODO: Add separate transform for inverses */
-  fp_push(rule_make("exp log = id", "exp log f", "f"), rules);
-  fp_push(rule_make("log exp = id", "log exp f", "f"), rules);
+  fp_push(rule_make("exp log = id", "exp log f", "f"), norm_rules);
+  fp_push(rule_make("log exp = id", "log exp f", "f"), norm_rules);
+}
+
+void denorm_rules_init(void) {
+  fp_push(rule_make("+ to -", "f - g", "f + -1 * g"), denorm_rules);
+  fp_push(rule_make("/ to *", "f / g", "f * g ^ -1"), denorm_rules);
+
+  fp_push(rule_make("x*x = x^2", "f * f", "f ^ 2"), denorm_rules);
+
+  fp_push(rule_make("x^1 = x", "f ^ 1", "f"), denorm_rules);
+  fp_push(rule_make("x^y^z = x^yz", "(f ^ g) ^ h", "f ^ (g * h)"),
+          denorm_rules);
+
+  fp_push(rule_make("factor left", "f * g + h * g", "(f + h) * g"),
+          denorm_rules);
+  fp_push(rule_make("factor right", "f * g + f * h", "f * (g + h)"),
+          denorm_rules);
+
+  fp_push(rule_make("power left", "f ^ g * h ^ g", "(f h) ^ g"), denorm_rules);
+  fp_push(rule_make("power right", "f ^ g * f ^ h", "f ^ (g + h)"),
+          denorm_rules);
 }
 
 void diff_rules_init(void) {
@@ -564,13 +687,16 @@ int norm_apply(Expression expr) {
     curr_changed |= expr_it_apply(expr, T_POST, id_apply, simpls + 1);
     curr_changed |= expr_it_apply(expr, T_POST, ann_apply, simpls + 2);
 
-    for (int i = 0; i < fp_length(rules); i++) {
-      curr_changed |= expr_it_apply(expr, T_POST, match_apply, rules + i);
+    for (int i = 0; i < fp_length(norm_rules); i++) {
+      curr_changed |= expr_it_apply(expr, T_POST, match_apply, norm_rules + i);
     }
 
     curr_changed |= expr_it_apply(expr, T_POST, eval_apply, NULL);
-	curr_changed |= expr_it_apply(expr, T_PRE, assoc_apply, opr_get("+"));
-	curr_changed |= expr_it_apply(expr, T_PRE, assoc_apply, opr_get("*"));
+    curr_changed |= expr_it_apply(expr, T_POST, assoc_apply, opr_get("+"));
+    curr_changed |= expr_it_apply(expr, T_POST, assoc_apply, opr_get("*"));
+
+    curr_changed |= expr_it_apply(expr, T_POST, order_apply, opr_get("+"));
+    curr_changed |= expr_it_apply(expr, T_POST, order_apply, opr_get("*"));
 
     changed |= curr_changed;
     if (!curr_changed) {

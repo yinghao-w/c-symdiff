@@ -6,7 +6,7 @@
 int main(int argc, char *argv[]) {
   opr_set_init();
   simpls_init();
-  rules_init();
+  norm_rules_init();
   diff_rules_init();
 
   while (1) {
