@@ -6,8 +6,6 @@
 
 Scalar epsilon = 0.001;
 
-void opr_set_setup(void) { opr_set_init(); }
-
 void test_scalar_match(void) {
   char s[] = "-13.6";
   assert(!scalar_match(s, s + 1));
@@ -79,7 +77,7 @@ void test_mul_insert(void) {
   fp_push(token1, tokens);
   fp_push(token2, tokens);
 
-  mul_insert(tokens);
+  tokens = mul_insert(tokens);
   assert(fp_length(tokens) == 3);
   assert(tokens[1].token_type == OPR);
   assert(tokens[1].opr == opr_get("*"));
@@ -109,7 +107,7 @@ void test_lexer(void) {
 
 void run_tests(void) {
   printf("\n\n%s\n\n", __FILE__);
-  opr_set_setup();
+  opr_set_init();
 
   test_scalar_match();
   test_var_match();

@@ -211,16 +211,16 @@ static void ast_rotate_ccw(Ast_Node *node) {
 }
 
 static void ast_reflect(Ast_Node *node) {
-	Ast_Node *new_lchild = node->rchild;
-	Ast_Node *new_rchild = node->lchild;
-	if (new_lchild) {
-		ast_detach(new_lchild);
-	}
-	if (new_rchild) {
-		ast_detach(new_rchild);
-	}
-	ast_attach(new_lchild, node);
-	ast_attach(new_rchild, node);
+  Ast_Node *new_lchild = node->rchild;
+  Ast_Node *new_rchild = node->lchild;
+  if (new_lchild) {
+    ast_detach(new_lchild);
+  }
+  if (new_rchild) {
+    ast_detach(new_rchild);
+  }
+  ast_attach(new_lchild, node);
+  ast_attach(new_rchild, node);
 }
 
 static void ast_swap(Ast_Node *node1, Ast_Node *node2) {
@@ -442,11 +442,9 @@ static void qwe(Ast_Node *node, void *ctx) {
   Opr *opr = ctx_all->ctx_trans;
 
   if (T_IS_OPR(node) && T_OPR(node) == opr) {
-	  ;
-
+    ;
+  }
 }
-}
-
 
 /* --------------------------- *
  * PATTERN MATCHING TRANSFORMS *
@@ -577,6 +575,7 @@ static void match_apply(Ast_Node *node, void *ctx) {
         ast_overwrite(repl_node, bound_node);
       }
     }
+    free(it);
     ast_overwrite(node, replacement);
     ctx_all->changed = 1;
   }
@@ -597,13 +596,18 @@ struct PatternRule *norm_rules = NULL;
 struct PatternRule *denorm_rules = NULL;
 struct PatternRule *diff_rules = NULL;
 
-static struct PatternRule rule_make(const char name[], char pattern[],
-                                    char replacement[]) {
+static struct PatternRule rule_create(const char name[], char pattern[],
+                                      char replacement[]) {
   struct PatternRule rule;
   strncpy(rule.name, name, NAME_LENGTH);
   rule.pattern = expr_create(pattern);
   rule.replacement = expr_create(replacement);
   return rule;
+}
+
+static void rule_cleanup(struct PatternRule rule) {
+  expr_destroy(rule.pattern);
+  expr_destroy(rule.replacement);
 }
 
 static struct PatternRule rule_inverse(struct PatternRule *rule) {
@@ -616,7 +620,7 @@ static struct PatternRule rule_inverse(struct PatternRule *rule) {
   return inverse_rule;
 }
 
-static struct Simpl simpl_make(const char name[], Opr *opr, Scalar x) {
+static struct Simpl simpl_create(const char name[], Opr *opr, Scalar x) {
   struct Simpl simpl;
   strncpy(simpl.name, name, NAME_LENGTH);
   simpl.opr = opr;
@@ -625,31 +629,34 @@ static struct Simpl simpl_make(const char name[], Opr *opr, Scalar x) {
 }
 
 void simpls_init(void) {
-  fp_push(simpl_make("add id", opr_get("+"), 0), simpls);
-  fp_push(simpl_make("mul id", opr_get("*"), 1), simpls);
-  fp_push(simpl_make("mul ann", opr_get("*"), 0), simpls);
+  fp_push(simpl_create("add id", opr_get("+"), 0), simpls);
+  fp_push(simpl_create("mul id", opr_get("*"), 1), simpls);
+  fp_push(simpl_create("mul ann", opr_get("*"), 0), simpls);
 }
 
 void norm_rules_init(void) {
 
-  fp_push(rule_make("- to +", "f - g", "f + -1 * g"), norm_rules);
-  fp_push(rule_make("/ to *", "f / g", "f * g ^ -1"), norm_rules);
+  fp_push(rule_create("- to +", "f - g", "f + -1 * g"), norm_rules);
+  fp_push(rule_create("/ to *", "f / g", "f * g ^ -1"), norm_rules);
 
-  fp_push(rule_make("x+x = 2*x", "f + f", "2 * f"), norm_rules);
-  fp_push(rule_make("x*x = x^2", "f * f", "f ^ 2"), norm_rules);
+  fp_push(rule_create("x+x = 2*x", "f + f", "2 * f"), norm_rules);
+  fp_push(rule_create("x*x = x^2", "f * f", "f ^ 2"), norm_rules);
 
-  fp_push(rule_make("x^1 = x", "f ^ 1", "f"), norm_rules);
-  fp_push(rule_make("x^y^z = x^yz", "(f ^ g) ^ h", "f ^ (g * h)"), norm_rules);
-
-  fp_push(rule_make("factor left", "f * g + h * g", "(f + h) * g"), norm_rules);
-  fp_push(rule_make("factor right", "f * g + f * h", "f * (g + h)"),
+  fp_push(rule_create("x^1 = x", "f ^ 1", "f"), norm_rules);
+  fp_push(rule_create("x^y^z = x^yz", "(f ^ g) ^ h", "f ^ (g * h)"),
           norm_rules);
 
-  fp_push(rule_make("power left", "f ^ g * h ^ g", "(f h) ^ g"), norm_rules);
-  fp_push(rule_make("power right", "f ^ g * f ^ h", "f ^ (g + h)"), norm_rules);
+  fp_push(rule_create("factor left", "f * g + h * g", "(f + h) * g"),
+          norm_rules);
+  fp_push(rule_create("factor right", "f * g + f * h", "f * (g + h)"),
+          norm_rules);
+
+  fp_push(rule_create("power left", "f ^ g * h ^ g", "(f h) ^ g"), norm_rules);
+  fp_push(rule_create("power right", "f ^ g * f ^ h", "f ^ (g + h)"),
+          norm_rules);
   /* TODO: Add separate transform for inverses */
-  fp_push(rule_make("exp log = id", "exp log f", "f"), norm_rules);
-  fp_push(rule_make("log exp = id", "log exp f", "f"), norm_rules);
+  fp_push(rule_create("exp log = id", "exp log f", "f"), norm_rules);
+  fp_push(rule_create("log exp = id", "log exp f", "f"), norm_rules);
 }
 
 void denorm_rules_init(void) {
@@ -658,26 +665,38 @@ void denorm_rules_init(void) {
 
 void diff_rules_init(void) {
 
-  fp_push(rule_make("constant rule", "x'c", "0"), diff_rules);
-  fp_push(rule_make("self rule", "x'x", "1"), diff_rules);
-  fp_push(rule_make("sum rule", "x'(f + g)", "x'f + x'g"), diff_rules);
-  fp_push(rule_make("product rule", "x'(f * g)", "(x'f * g) + (f * x'g)"),
+  fp_push(rule_create("constant rule", "x'c", "0"), diff_rules);
+  fp_push(rule_create("self rule", "x'x", "1"), diff_rules);
+  fp_push(rule_create("sum rule", "x'(f + g)", "x'f + x'g"), diff_rules);
+  fp_push(rule_create("product rule", "x'(f * g)", "(x'f * g) + (f * x'g)"),
           diff_rules);
-  fp_push(rule_make("power rule", "x'(f ^ c)", "c * f ^ (c - 1) * x'f"),
+  fp_push(rule_create("power rule", "x'(f ^ c)", "c * f ^ (c - 1) * x'f"),
           diff_rules);
-  fp_push(rule_make("exp rule", "x'(exp f)", "exp f * x'f"), diff_rules);
-  fp_push(rule_make("log rule", "x'(log f)", "f ^ -1 * x'f"), diff_rules);
-  fp_push(rule_make("sine rule", "x'(sin f)", "cos f * x'f"), diff_rules);
-  fp_push(rule_make("cosine rule", "x'(cos f)", "-1 * sin f * x'f"),
+  fp_push(rule_create("exp rule", "x'(exp f)", "exp f * x'f"), diff_rules);
+  fp_push(rule_create("log rule", "x'(log f)", "f ^ -1 * x'f"), diff_rules);
+  fp_push(rule_create("sine rule", "x'(sin f)", "cos f * x'f"), diff_rules);
+  fp_push(rule_create("cosine rule", "x'(cos f)", "-1 * sin f * x'f"),
           diff_rules);
+}
+
+void trans_cleanup(void) {
+  fp_destroy(simpls);
+  for (int i = 0; i < fp_length(norm_rules); i++) {
+    rule_cleanup(norm_rules[i]);
+  }
+  fp_destroy(norm_rules);
+  for (int i = 0; i < fp_length(diff_rules); i++) {
+    rule_cleanup(diff_rules[i]);
+  }
+  fp_destroy(diff_rules);
 }
 
 /* --------------------- *
  * RECURSIVE APPLICATION *
  * --------------------- */
 
-static int expr_it_apply(Expression expr, ORDER order, void trans(Ast_Node *, void *),
-                  void *ctx_trans) {
+static int expr_it_apply(Expression expr, ORDER order,
+                         void trans(Ast_Node *, void *), void *ctx_trans) {
   struct CtxAll ctx = {0, ctx_trans};
   ast_iter_apply(get_root(expr), order, trans, &ctx);
   return ctx.changed;

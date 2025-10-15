@@ -428,6 +428,9 @@ void run_tests(void) {
   test_match();
   test_match_apply();
   test_norm_apply();
+
+  trans_cleanup();
+  opr_set_cleanup();
 }
 
 int main(void) {

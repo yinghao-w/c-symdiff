@@ -17,6 +17,8 @@ void simpls_init(void);
 void norm_rules_init(void);
 void diff_rules_init(void);
 
+void trans_cleanup(void);
+
 /* Apply normalisation and differentiation transforms. */
 int norm_apply(Expression expr);
 int diff_apply(Expression expr);

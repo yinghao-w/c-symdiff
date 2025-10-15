@@ -3,7 +3,7 @@
 #include "ast.c"
 #include <stdio.h>
 
-int main(int argc, char *argv[]) {
+int main(void) {
   opr_set_init();
   simpls_init();
   norm_rules_init();
@@ -24,7 +24,12 @@ int main(int argc, char *argv[]) {
     diff_apply(expr);
     expr_print(expr);
     printf("\n");
+
+    expr_destroy(expr);
   }
+
+  opr_set_cleanup();
+  trans_cleanup();
 
   return 0;
 }

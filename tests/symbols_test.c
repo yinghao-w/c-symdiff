@@ -1,4 +1,5 @@
 #include "symbols.c"
+#include "symbols.h"
 #include <assert.h>
 #include <stdio.h>
 
@@ -41,6 +42,8 @@ void run_tests(void) {
   test_opr_set_init();
   test_opr_get();
   test_opr_cmp();
+
+  opr_set_cleanup();
 }
 
 int main(void) {
