@@ -576,10 +576,12 @@ static void match_apply(Ast_Node *node, void *ctx) {
       }
     }
     free(it);
+	/* The old node should contain the originals of the bound subtrees, which will
+	 * all be freed upon overwriting. Hence the values in the bindings map become
+	 * invalid and do not need to be freed again. */
     ast_overwrite(node, replacement);
     ctx_all->changed = 1;
   }
-  // destroy bindings in side TODO:
   bind_destroy(bindings);
 }
 
