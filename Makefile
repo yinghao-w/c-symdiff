@@ -1,4 +1,3 @@
-CC = gcc
 CFLAGS = -std=c11 -g -Wall -Wextra -Wpedantic -Wno-unused-function -Wno-return-type
 CMATH = -lm
 INCLUDE = -I .
